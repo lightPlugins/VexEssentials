@@ -1,0 +1,9 @@
+name: VexEssentials
+version: ${version}
+main: dev.vexsoft.essentials.paper.VexEssentialsPlugin
+api-version: "1.21"
+load: STARTUP
+description: Essential server features built on VexCore
+folia-supported: true
+depend:
+  - VexCore
