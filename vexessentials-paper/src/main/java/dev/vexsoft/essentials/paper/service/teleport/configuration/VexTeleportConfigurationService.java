@@ -12,16 +12,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 
 /** Loads teleport settings with safe fallbacks and understandable console warnings. */
 @Dependencies(ConfigurationService.class)
 public final class VexTeleportConfigurationService implements TeleportConfigurationService {
 
-  private static final Pattern SOUND_KEY = Pattern.compile(
-      "[a-z0-9._-]+:[a-z0-9/._-]+"
-  );
   private static final Map<String, SoundProfile> DEFAULT_SOUNDS = Map.of(
       "request-sent", profile("minecraft:block.note_block.pling", 0.8F, 1.2F),
       "request-received", profile("minecraft:block.note_block.pling", 0.9F, 1.0F),
@@ -94,7 +91,13 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
     String checked = Objects.requireNonNull(event, "event").toLowerCase(Locale.ROOT);
     return sounds.getOrDefault(checked, DEFAULT_SOUNDS.getOrDefault(
         checked,
-        new SoundProfile(false, "minecraft:block.note_block.pling", "player", 1, 1)
+        new SoundProfile(
+            false,
+            Key.key("minecraft:block.note_block.pling"),
+            Sound.Source.PLAYER,
+            1,
+            1
+        )
     ));
   }
 
@@ -176,10 +179,11 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
   ) {
     String root = "sounds." + event;
     boolean enabled = configuration.getBoolean(root + ".enabled", fallback.enabled());
-    String key = configuration.getString(root + ".key", fallback.key()).trim().toLowerCase(
+    String key = configuration.getString(root + ".key", fallback.key().asString())
+        .trim().toLowerCase(
         Locale.ROOT
     );
-    if (!SOUND_KEY.matcher(key).matches()) {
+    if (!isNamespacedKey(key)) {
       warn(
           "The sound configured at '" + root + ".key' in 'teleport.yml' could not be "
               + "used because '" + key + "' is not a valid namespaced key. Expected a value "
@@ -187,21 +191,36 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
               + "This sound has been disabled.",
           null
       );
-      return new SoundProfile(false, fallback.key(), fallback.source(), fallback.volume(),
-          fallback.pitch());
+      return new SoundProfile(
+          false,
+          fallback.key(),
+          fallback.source(),
+          fallback.volume(),
+          fallback.pitch()
+      );
     }
-    String source = configuration.getString(root + ".source", fallback.source())
+    String sourceName = configuration.getString(
+        root + ".source",
+        fallback.source().name().toLowerCase(Locale.ROOT)
+    )
         .trim().toLowerCase(Locale.ROOT);
+    Sound.Source source;
     try {
-      Sound.Source.valueOf(source.toUpperCase(Locale.ROOT));
+      source = Sound.Source.valueOf(sourceName.toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException exception) {
       warn(
           "The sound source configured at '" + root + ".source' in 'teleport.yml' could not "
-              + "be used because '" + source + "' is unknown. Expected a source such as "
+              + "be used because '" + sourceName + "' is unknown. Expected a source such as "
               + "'player', 'master', or 'ambient'. This sound has been disabled.",
           null
       );
-      return new SoundProfile(false, key, fallback.source(), fallback.volume(), fallback.pitch());
+      return new SoundProfile(
+          false,
+          parseKey(key),
+          fallback.source(),
+          fallback.volume(),
+          fallback.pitch()
+      );
     }
     float volume = boundedFloat(
         configuration.getDouble(root + ".volume", fallback.volume()),
@@ -213,7 +232,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
         root + ".pitch",
         fallback.pitch()
     );
-    return new SoundProfile(enabled, key, source, volume, pitch);
+    return new SoundProfile(enabled, parseKey(key), source, volume, pitch);
   }
 
   private Duration positiveDuration(
@@ -277,6 +296,19 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
   }
 
   private static SoundProfile profile(final String key, final float volume, final float pitch) {
-    return new SoundProfile(true, key, "player", volume, pitch);
+    return new SoundProfile(true, parseKey(key), Sound.Source.PLAYER, volume, pitch);
+  }
+
+  private static boolean isNamespacedKey(final String value) {
+    int separator = value.indexOf(':');
+    return separator > 0
+        && separator == value.lastIndexOf(':')
+        && separator < value.length() - 1
+        && Key.parseable(value);
+  }
+
+  @SuppressWarnings("PatternValidation")
+  private static Key parseKey(final String value) {
+    return Key.key(value);
   }
 }

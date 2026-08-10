@@ -6,11 +6,9 @@ import dev.vexsoft.core.api.service.registry.VexServiceRegistry;
 import dev.vexsoft.core.paper.service.scheduler.ScheduleService;
 import dev.vexsoft.essentials.paper.service.teleport.configuration.TeleportConfigurationService;
 import dev.vexsoft.essentials.paper.teleport.configuration.SoundProfile;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
-import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import org.bukkit.entity.Player;
 
@@ -43,8 +41,8 @@ public final class VexTeleportSoundService implements TeleportSoundService {
     }
     try {
       Sound sound = Sound.sound(
-          Key.key(profile.key()),
-          Sound.Source.valueOf(profile.source().toUpperCase(Locale.ROOT)),
+          profile.key(),
+          profile.source(),
           profile.volume(),
           profile.pitch()
       );
