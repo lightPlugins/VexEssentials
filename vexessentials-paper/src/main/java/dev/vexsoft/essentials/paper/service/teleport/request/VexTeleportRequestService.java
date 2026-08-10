@@ -1,7 +1,5 @@
 package dev.vexsoft.essentials.paper.service.teleport.request;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import dev.vexsoft.core.api.messaging.DeliveryResult;
 import dev.vexsoft.core.api.messaging.MessageTarget;
 import dev.vexsoft.core.api.messaging.MessageType;
@@ -11,9 +9,12 @@ import dev.vexsoft.core.api.service.messaging.MessagingService;
 import dev.vexsoft.core.api.service.network.PlayerDirectoryService;
 import dev.vexsoft.core.api.service.player.PlayerIdentityService;
 import dev.vexsoft.core.api.service.player.PlayerService;
+import dev.vexsoft.core.api.service.cache.CacheService;
 import dev.vexsoft.core.api.service.registry.Dependencies;
 import dev.vexsoft.core.api.service.registry.VexServiceRegistry;
 import dev.vexsoft.core.api.world.ServerPosition;
+import dev.vexsoft.core.cache.VexCache;
+import dev.vexsoft.core.cache.VexCacheOptions;
 import dev.vexsoft.core.paper.service.scheduler.ScheduleService;
 import dev.vexsoft.essentials.api.service.teleport.EssentialsTeleportService;
 import dev.vexsoft.essentials.api.teleport.TeleportOptions;
@@ -40,8 +41,9 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** Caffeine-backed TPA coordinator supporting local and cross-server participants. */
+/** TPA coordinator supporting local and cross-server participants. */
 @Dependencies({
+    CacheService.class,
     PlayerService.class,
     PlayerIdentityService.class,
     PlayerDirectoryService.class,
@@ -64,9 +66,9 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
   private final TeleportPresentationService presentation;
   private final EssentialsTeleportService teleports;
   private final Logger logger;
-  private final Cache<UUID, TeleportRequest> incoming;
-  private final Cache<UUID, TeleportRequest> outgoing;
-  private final Cache<UUID, Instant> cooldowns;
+  private final VexCache<UUID, TeleportRequest> incoming;
+  private final VexCache<UUID, TeleportRequest> outgoing;
+  private final VexCache<UUID, Instant> cooldowns;
   private final Map<UUID, ConcurrentLinkedDeque<UUID>> incomingByTarget =
       new ConcurrentHashMap<>();
   private final Map<UUID, ConcurrentLinkedDeque<UUID>> outgoingByRequester =
@@ -85,12 +87,21 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
     presentation = checked.require(TeleportPresentationService.class);
     teleports = checked.require(EssentialsTeleportService.class);
     logger = Logger.getLogger(checked.getOwner().getServiceOwnerName());
+    CacheService caches = checked.require(CacheService.class);
     long maximum = configuration.maximumRequests();
     Duration retention = configuration.requestExpiration().plusSeconds(30);
-    incoming = Caffeine.newBuilder().maximumSize(maximum).expireAfterWrite(retention).build();
-    outgoing = Caffeine.newBuilder().maximumSize(maximum).expireAfterWrite(retention).build();
-    cooldowns = Caffeine.newBuilder().maximumSize(maximum).expireAfterWrite(Duration.ofMinutes(5))
-        .build();
+    incoming = caches.create(
+        "teleport-request-incoming",
+        cacheOptions(maximum, retention)
+    );
+    outgoing = caches.create(
+        "teleport-request-outgoing",
+        cacheOptions(maximum, retention)
+    );
+    cooldowns = caches.create(
+        "teleport-request-cooldowns",
+        cacheOptions(maximum, Duration.ofMinutes(5))
+    );
   }
 
   @Override
@@ -106,7 +117,7 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
       return CompletableFuture.completedFuture(false);
     }
     Instant now = Instant.now();
-    Instant cooldown = cooldowns.getIfPresent(requester.getUniqueId());
+    Instant cooldown = cooldowns.getIfPresent(requester.getUniqueId()).orElse(null);
     if (cooldown != null && now.isBefore(cooldown)) {
       presentation.send(
           requester,
@@ -310,12 +321,12 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
 
   @Override
   public void receive(final TeleportRequestDecision decision) {
-    TeleportRequest request = outgoing.getIfPresent(decision.requestId());
+    TeleportRequest request = outgoing.getIfPresent(decision.requestId()).orElse(null);
     if (request != null) {
       receiveForRequester(request, decision);
       return;
     }
-    TeleportRequest incomingRequest = incoming.getIfPresent(decision.requestId());
+    TeleportRequest incomingRequest = incoming.getIfPresent(decision.requestId()).orElse(null);
     if (incomingRequest != null && decision.state() == TeleportRequestState.CANCELLED
         && incomingRequest.transition(
             TeleportRequestState.PENDING,
@@ -388,7 +399,7 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
 
   @Override
   public void receive(final TeleportRequestExecution execution) {
-    TeleportRequest request = incoming.getIfPresent(execution.requestId());
+    TeleportRequest request = incoming.getIfPresent(execution.requestId()).orElse(null);
     if (request == null || request.type() != TeleportRequestType.TARGET_HERE
         || request.state() != TeleportRequestState.ACCEPTING) {
       return;
@@ -402,12 +413,12 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
 
   @Override
   public void receive(final TeleportRequestCompletion completion) {
-    TeleportRequest request = outgoing.getIfPresent(completion.requestId());
+    TeleportRequest request = outgoing.getIfPresent(completion.requestId()).orElse(null);
     if (request != null && request.type() == TeleportRequestType.TARGET_HERE) {
       complete(request, request.requesterId(), completion);
       return;
     }
-    request = incoming.getIfPresent(completion.requestId());
+    request = incoming.getIfPresent(completion.requestId()).orElse(null);
     if (request != null && request.type() == TeleportRequestType.TO_TARGET) {
       complete(request, request.targetId(), completion);
     }
@@ -574,7 +585,7 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
   }
 
   private Optional<TeleportRequest> latest(
-      final Cache<UUID, TeleportRequest> cache,
+      final VexCache<UUID, TeleportRequest> cache,
       final ConcurrentLinkedDeque<UUID> index,
       final String selector
   ) {
@@ -583,7 +594,7 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
     }
     UUID exactId = parseUuid(selector);
     for (UUID requestId : index) {
-      TeleportRequest request = cache.getIfPresent(requestId);
+      TeleportRequest request = cache.getIfPresent(requestId).orElse(null);
       if (request == null || request.state() != TeleportRequestState.PENDING) {
         continue;
       }
@@ -596,7 +607,7 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
   }
 
   private void store(
-      final Cache<UUID, TeleportRequest> cache,
+      final VexCache<UUID, TeleportRequest> cache,
       final Map<UUID, ConcurrentLinkedDeque<UUID>> indexes,
       final UUID playerId,
       final TeleportRequest request
@@ -658,6 +669,13 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
 
   private String remainingSeconds(final Duration duration) {
     return Long.toString(Math.max(0, duration.toSeconds()));
+  }
+
+  private VexCacheOptions cacheOptions(final long maximum, final Duration expiration) {
+    return VexCacheOptions.builder()
+        .maximumSize(maximum)
+        .expireAfterWrite(expiration)
+        .build();
   }
 
   private void reportFailure(final String action, final Throwable throwable) {
