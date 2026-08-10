@@ -8,6 +8,9 @@ import dev.vexsoft.core.paper.service.commands.CommandService;
 import dev.vexsoft.core.paper.service.listeners.ListenerService;
 import dev.vexsoft.essentials.api.service.teleport.EssentialsTeleportService;
 import dev.vexsoft.essentials.api.teleport.container.TeleportContainer;
+import dev.vexsoft.essentials.paper.command.VexEssentialsReloadCommand;
+import dev.vexsoft.essentials.paper.service.reload.EssentialsReloadService;
+import dev.vexsoft.essentials.paper.service.reload.VexEssentialsReloadService;
 import dev.vexsoft.essentials.paper.service.teleport.configuration.TeleportConfigurationService;
 import dev.vexsoft.essentials.paper.service.teleport.configuration.VexTeleportConfigurationService;
 import dev.vexsoft.essentials.paper.service.teleport.container.VexTeleportContainer;
@@ -63,6 +66,7 @@ public final class VexEssentialsPlugin extends VexPlugin {
     getServices().register(EssentialsTeleportService.class, VexEssentialsTeleportService.class);
     getServices().register(DirectTeleportService.class, VexDirectTeleportService.class);
     getServices().register(TeleportRequestService.class, VexTeleportRequestService.class);
+    getServices().register(EssentialsReloadService.class, VexEssentialsReloadService.class);
   }
 
   @Override
@@ -92,6 +96,7 @@ public final class VexEssentialsPlugin extends VexPlugin {
 
   @Override
   protected void registerCommands(final CommandService commands) {
+    commands.register(VexEssentialsReloadCommand.class);
     commands.register(TeleportCommand.class);
     commands.register(TeleportHereCommand.class);
     commands.register(TeleportRequestCommand.class);

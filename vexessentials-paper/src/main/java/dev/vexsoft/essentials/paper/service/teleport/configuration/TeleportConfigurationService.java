@@ -23,5 +23,5 @@ public interface TeleportConfigurationService extends VexService {
 
   SoundProfile sound(String event);
 
-  void reload();
+  boolean reload();
 }

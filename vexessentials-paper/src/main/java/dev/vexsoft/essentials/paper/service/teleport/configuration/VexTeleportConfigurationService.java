@@ -102,7 +102,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
   }
 
   @Override
-  public synchronized void reload() {
+  public synchronized boolean reload() {
     try {
       VexConfiguration configuration = configurations.load("teleport.yml");
       Duration loadedExpiration = positiveDuration(
@@ -154,6 +154,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
       cancelWarmupOnDamage = loadedCancelOnDamage;
       sounds.clear();
       sounds.putAll(loadedSounds);
+      return true;
     } catch (RuntimeException exception) {
       requestExpiration = Duration.ofSeconds(60);
       requestCooldown = Duration.ofSeconds(5);
@@ -169,6 +170,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
               + "default teleport settings instead.",
           exception
       );
+      return false;
     }
   }
 
