@@ -9,6 +9,7 @@ dependencies {
     }
     compileOnly("dev.vexsoft:vexcore-paper-api:1.0.0-SNAPSHOT")
     compileOnly("io.papermc.paper:paper-api:26.2.build.84-stable")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
 
     testImplementation("io.papermc.paper:paper-api:26.2.build.84-stable")
     testImplementation(platform("org.junit:junit-bom:6.0.0"))

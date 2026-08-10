@@ -1,8 +1,15 @@
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import com.github.spotbugs.snom.Confidence
+import com.github.spotbugs.snom.Effort
+import com.github.spotbugs.snom.SpotBugsExtension
+import com.github.spotbugs.snom.SpotBugsTask
+import org.gradle.api.plugins.quality.Checkstyle
+import org.gradle.api.plugins.quality.CheckstyleExtension
 
 plugins {
     base
+    id("com.github.spotbugs") version "6.5.9" apply false
 }
 
 allprojects {
@@ -18,6 +25,7 @@ allprojects {
 
 subprojects {
     plugins.withId("java") {
+        pluginManager.apply("com.github.spotbugs")
         dependencies {
             add("compileOnly", "org.projectlombok:lombok:1.18.42")
             add("annotationProcessor", "org.projectlombok:lombok:1.18.42")
@@ -44,6 +52,30 @@ subprojects {
 
         tasks.withType<Test>().configureEach {
             useJUnitPlatform()
+        }
+
+        pluginManager.apply("checkstyle")
+        extensions.configure<CheckstyleExtension> {
+            toolVersion = "13.9.0"
+            configFile = rootProject.file("config/checkstyle.xml")
+            isIgnoreFailures = false
+            maxWarnings = 0
+        }
+
+        tasks.withType<Checkstyle>().matching { it.name == "checkstyleTest" }.configureEach {
+            enabled = false
+        }
+
+        extensions.configure<SpotBugsExtension> {
+            effort.set(Effort.MAX)
+            reportLevel.set(Confidence.MEDIUM)
+            excludeFilter.set(rootProject.layout.projectDirectory.file("config/spotbugs-exclude.xml"))
+        }
+
+        tasks.withType<SpotBugsTask>().configureEach {
+            reports.create("html") {
+                required.set(true)
+            }
         }
     }
 }
