@@ -32,6 +32,8 @@ import dev.vexsoft.essentials.paper.teleport.request.TeleportRequest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -289,6 +291,26 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
         new TeleportRequestDecision(request.requestId(), TeleportRequestState.CANCELLED, null)
     );
     return true;
+  }
+
+  @Override
+  public List<String> getIncomingSuggestions(final UUID targetId) {
+    ConcurrentLinkedDeque<UUID> index = incomingByTarget.get(
+        Objects.requireNonNull(targetId, "targetId")
+    );
+    if (index == null) {
+      return List.of();
+    }
+    Instant now = Instant.now();
+    LinkedHashSet<String> names = new LinkedHashSet<>();
+    for (UUID requestId : index) {
+      incoming.getIfPresent(requestId)
+          .filter(request -> request.state() == TeleportRequestState.PENDING)
+          .filter(request -> !request.expired(now))
+          .map(TeleportRequest::requesterName)
+          .ifPresent(names::add);
+    }
+    return List.copyOf(names);
   }
 
   @Override

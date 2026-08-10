@@ -7,7 +7,9 @@ import dev.vexsoft.core.api.service.registry.VexServiceRegistry;
 import dev.vexsoft.core.paper.command.Argument;
 import dev.vexsoft.core.paper.command.Command;
 import dev.vexsoft.core.paper.command.CommandRoot;
+import dev.vexsoft.core.paper.command.Suggest;
 import dev.vexsoft.core.paper.command.VexCommandSource;
+import dev.vexsoft.core.paper.command.suggestion.PlayerNameSuggestionProvider;
 import dev.vexsoft.essentials.paper.service.teleport.execution.DirectTeleportService;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -36,7 +38,7 @@ public final class TeleportHereCommand {
   @Command(value = "<player>", permission = "vexessentials.command.teleport.here")
   public CompletableFuture<Boolean> teleportHere(
       final VexCommandSource source,
-      @Argument("player") final String playerName
+      @Argument("player") @Suggest(PlayerNameSuggestionProvider.class) final String playerName
   ) {
     Player player = (Player) source.getSender();
     VexPlayer actor = players.require(player.getUniqueId());

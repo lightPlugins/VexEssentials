@@ -7,6 +7,8 @@ import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestCo
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestDecision;
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestExecution;
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestOffer;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /** Owns bounded, runtime-only teleport requests and their atomic state transitions. */
@@ -19,6 +21,9 @@ public interface TeleportRequestService extends VexService {
   boolean deny(VexPlayer target, String selector);
 
   boolean cancel(VexPlayer requester);
+
+  /** Returns pending requester names suitable for command suggestions. */
+  List<String> getIncomingSuggestions(UUID targetId);
 
   void receive(TeleportRequestOffer offer);
 

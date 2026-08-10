@@ -1,4 +1,4 @@
 vexessentials:
   reload:
-    success: "<tailwind:lime>VexEssentials was reloaded successfully.</tailwind:lime>"
-    failed: "<tailwind:red>VexEssentials could not reload every configuration file. Please check the console for more information.</tailwind:red>"
+    success: "<tailwind:zinc:4>VexEssentials was reloaded <tailwind:lime>successfully<tailwind:zinc:4>."
+    failed: "<tailwind:red>VexEssentials could not reload every configuration file. <tailwind:red:7>Please check the console for more information<tailwind:red>."

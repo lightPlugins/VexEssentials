@@ -8,7 +8,9 @@ import dev.vexsoft.core.api.service.registry.VexServiceRegistry;
 import dev.vexsoft.core.paper.command.Argument;
 import dev.vexsoft.core.paper.command.Command;
 import dev.vexsoft.core.paper.command.CommandRoot;
+import dev.vexsoft.core.paper.command.Suggest;
 import dev.vexsoft.core.paper.command.VexCommandSource;
+import dev.vexsoft.core.paper.command.suggestion.PlayerNameSuggestionProvider;
 import dev.vexsoft.essentials.api.service.teleport.EssentialsTeleportService;
 import dev.vexsoft.essentials.api.teleport.TeleportOptions;
 import dev.vexsoft.essentials.paper.service.teleport.presentation.TeleportPresentationService;
@@ -54,7 +56,7 @@ public final class TeleportCommand {
   @Command(value = "<player>", permission = "vexessentials.command.teleport")
   public CompletableFuture<Boolean> teleport(
       final VexCommandSource source,
-      @Argument("player") final String targetName
+      @Argument("player") @Suggest(PlayerNameSuggestionProvider.class) final String targetName
   ) {
     Player platformPlayer = (Player) source.getSender();
     VexPlayer player = players.require(platformPlayer.getUniqueId());
@@ -87,8 +89,8 @@ public final class TeleportCommand {
   @Command(value = "<player> <target>", permission = "vexessentials.command.teleport.others")
   public CompletableFuture<Boolean> teleportOther(
       final VexCommandSource source,
-      @Argument("player") final String playerName,
-      @Argument("target") final String targetName
+      @Argument("player") @Suggest(PlayerNameSuggestionProvider.class) final String playerName,
+      @Argument("target") @Suggest(PlayerNameSuggestionProvider.class) final String targetName
   ) {
     Player platformPlayer = (Player) source.getSender();
     VexPlayer actor = players.require(platformPlayer.getUniqueId());
