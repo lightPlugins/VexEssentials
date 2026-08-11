@@ -6,7 +6,6 @@ import dev.vexsoft.essentials.api.teleport.request.TeleportRequestType;
 import dev.vexsoft.essentials.paper.teleport.presentation.RequestDialogChoice;
 import java.time.Duration;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /** Centralizes localized chat, hover, dialog, and sound presentation for teleports. */
@@ -24,15 +23,18 @@ public interface TeleportPresentationService extends VexService {
 
   void sendInteractiveRequest(
       VexPlayer player,
-      UUID requestId,
       TeleportRequestType type,
-      Map<String, String> replacements
+      String requesterName,
+      Duration expiration,
+      Duration lifetime,
+      Runnable reviewAction
   );
 
   CompletableFuture<RequestDialogChoice> openRequestDialog(
       VexPlayer player,
       String requesterName,
       TeleportRequestType type,
+      Duration expiration,
       Duration remaining
   );
 }

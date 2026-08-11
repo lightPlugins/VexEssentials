@@ -1,5 +1,6 @@
 package dev.vexsoft.essentials.paper;
 
+import dev.vexsoft.core.api.service.globaldata.GlobalDataService;
 import dev.vexsoft.core.api.service.messaging.MessagingService;
 import dev.vexsoft.core.api.service.player.DataService;
 import dev.vexsoft.core.api.service.player.PlayerContainerService;
@@ -7,6 +8,8 @@ import dev.vexsoft.core.paper.plugin.VexPlugin;
 import dev.vexsoft.core.paper.service.commands.CommandService;
 import dev.vexsoft.core.paper.service.listeners.ListenerService;
 import dev.vexsoft.essentials.api.service.teleport.EssentialsTeleportService;
+import dev.vexsoft.essentials.api.service.warp.WarpLocalizationService;
+import dev.vexsoft.essentials.api.service.warp.WarpService;
 import dev.vexsoft.essentials.api.teleport.container.TeleportContainer;
 import dev.vexsoft.essentials.paper.command.VexEssentialsReloadCommand;
 import dev.vexsoft.essentials.paper.service.reload.EssentialsReloadService;
@@ -29,6 +32,14 @@ import dev.vexsoft.essentials.paper.service.teleport.request.TeleportRequestServ
 import dev.vexsoft.essentials.paper.service.teleport.request.VexTeleportRequestService;
 import dev.vexsoft.essentials.paper.service.teleport.sound.TeleportSoundService;
 import dev.vexsoft.essentials.paper.service.teleport.sound.VexTeleportSoundService;
+import dev.vexsoft.essentials.paper.service.warp.VexWarpService;
+import dev.vexsoft.essentials.paper.service.warp.command.VexWarpCommandContext;
+import dev.vexsoft.essentials.paper.service.warp.command.VexWarpCommandService;
+import dev.vexsoft.essentials.paper.service.warp.command.WarpCommandContext;
+import dev.vexsoft.essentials.paper.service.warp.command.WarpCommandService;
+import dev.vexsoft.essentials.paper.service.warp.localization.VexWarpLocalizationService;
+import dev.vexsoft.essentials.paper.service.warp.presentation.VexWarpPresentationService;
+import dev.vexsoft.essentials.paper.service.warp.presentation.WarpPresentationService;
 import dev.vexsoft.essentials.paper.teleport.command.BackCommand;
 import dev.vexsoft.essentials.paper.teleport.command.TeleportCommand;
 import dev.vexsoft.essentials.paper.teleport.command.TeleportRequestCommand;
@@ -43,6 +54,13 @@ import dev.vexsoft.essentials.paper.teleport.messaging.handler.request.TeleportR
 import dev.vexsoft.essentials.paper.teleport.messaging.handler.request.TeleportRequestExecutionHandler;
 import dev.vexsoft.essentials.paper.teleport.messaging.handler.request.TeleportRequestOfferHandler;
 import dev.vexsoft.essentials.paper.teleport.listener.TeleportWarmupListener;
+import dev.vexsoft.essentials.paper.warp.command.WarpCreateCommand;
+import dev.vexsoft.essentials.paper.warp.command.WarpDeleteCommand;
+import dev.vexsoft.essentials.paper.warp.command.WarpListCommand;
+import dev.vexsoft.essentials.paper.warp.command.WarpTeleportCommand;
+import dev.vexsoft.essentials.paper.warp.command.WarpUpdateCommand;
+import dev.vexsoft.essentials.paper.warp.data.VexEssentialsGlobalData;
+import dev.vexsoft.essentials.paper.warp.messaging.handler.WarpRegistryChangedHandler;
 
 /**
  * Starts VexEssentials and connects it to the shared VexCore infrastructure
@@ -66,6 +84,17 @@ public final class VexEssentialsPlugin extends VexPlugin {
     getServices().register(EssentialsTeleportService.class, VexEssentialsTeleportService.class);
     getServices().register(DirectTeleportService.class, VexDirectTeleportService.class);
     getServices().register(TeleportRequestService.class, VexTeleportRequestService.class);
+    getServices().register(WarpService.class, VexWarpService.class);
+    getServices().register(
+        WarpLocalizationService.class,
+        VexWarpLocalizationService.class
+    );
+    getServices().register(
+        WarpPresentationService.class,
+        VexWarpPresentationService.class
+    );
+    getServices().register(WarpCommandContext.class, VexWarpCommandContext.class);
+    getServices().register(WarpCommandService.class, VexWarpCommandService.class);
     getServices().register(EssentialsReloadService.class, VexEssentialsReloadService.class);
   }
 
@@ -83,6 +112,12 @@ public final class VexEssentialsPlugin extends VexPlugin {
   }
 
   @Override
+  protected void registerGlobalData(final GlobalDataService data) {
+    data.register(VexEssentialsGlobalData.class);
+    getServices().require(WarpService.class).initialize();
+  }
+
+  @Override
   protected void registerMessages(final MessagingService messages) {
     messages.register(PlayerPositionRequestHandler.class);
     messages.register(PlayerPositionResponseHandler.class);
@@ -92,6 +127,7 @@ public final class VexEssentialsPlugin extends VexPlugin {
     messages.register(TeleportRequestCompletionHandler.class);
     messages.register(DirectTeleportExecutionHandler.class);
     messages.register(DirectTeleportCompletionHandler.class);
+    messages.register(WarpRegistryChangedHandler.class);
   }
 
   @Override
@@ -101,6 +137,11 @@ public final class VexEssentialsPlugin extends VexPlugin {
     commands.register(TeleportHereCommand.class);
     commands.register(TeleportRequestCommand.class);
     commands.register(BackCommand.class);
+    commands.register(WarpTeleportCommand.class);
+    commands.register(WarpListCommand.class);
+    commands.register(WarpCreateCommand.class);
+    commands.register(WarpUpdateCommand.class);
+    commands.register(WarpDeleteCommand.class);
   }
 
   @Override
@@ -110,7 +151,9 @@ public final class VexEssentialsPlugin extends VexPlugin {
 
   @Override
   protected void onVexEnable() {
+    getServices().require(WarpService.class).synchronizePermissions();
     getLogger().info("Teleport services started successfully");
+    getLogger().info("Warp services started successfully");
     getLogger().info("VexEssentials successfully enabled");
   }
 

@@ -112,6 +112,30 @@ public final class VexDirectTeleportService implements DirectTeleportService {
     }).exceptionally(throwable -> failure(actor, throwable));
   }
 
+  @Override
+  public CompletableFuture<Boolean> teleportToPosition(
+      final VexPlayer actor,
+      final String movingPlayerName,
+      final String destinationName,
+      final ServerPosition destination
+  ) {
+    Objects.requireNonNull(actor, "actor");
+    String checkedDestinationName = Objects.requireNonNull(destinationName, "destinationName");
+    ServerPosition checkedDestination = Objects.requireNonNull(destination, "destination");
+    return identities.find(movingPlayerName).thenCompose(identity -> {
+      if (identity.isEmpty()) {
+        notFound(actor, movingPlayerName);
+        return CompletableFuture.completedFuture(false);
+      }
+      return executeOrDeliver(
+          actor,
+          identity.get(),
+          checkedDestinationName,
+          checkedDestination
+      );
+    }).exceptionally(throwable -> failure(actor, throwable));
+  }
+
   private CompletableFuture<Boolean> executeOrDeliver(
       final VexPlayer actor,
       final PlayerIdentity moving,

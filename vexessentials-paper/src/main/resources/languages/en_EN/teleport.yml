@@ -13,6 +13,7 @@ back:
   empty: "<tailwind:red>You do not have a previous position to return to."
 warmup:
   started: "<tailwind:zinc:4>Your teleport will begin in <tailwind:amber>%remaining_time%<tailwind:zinc:4>. Please remain still."
+  countdown: "<tailwind:zinc:4>Your teleport will begin in <tailwind:amber>%remaining_time%<tailwind:zinc:4>. Please remain still."
   cancelled-move: "<tailwind:red>Your teleport was cancelled because you moved."
   cancelled-damage: "<tailwind:red>Your teleport was cancelled because you took damage."
 error:
@@ -31,7 +32,7 @@ request:
   sent:
     message: "<tailwind:zinc:4>Your teleport request to <tailwind:sky>%player%<tailwind:zinc:4> was sent <tailwind:lime>successfully<tailwind:zinc:4>."
     hover-text:
-      - "<tailwind:zinc:4>The request expires in <tailwind:amber>%remaining_time%<tailwind:zinc:4>."
+      - "<tailwind:zinc:4>The request expires after <tailwind:amber>%request_expiration_time%<tailwind:zinc:4>."
       - "<tailwind:zinc:7>You can cancel it with <tailwind:sky>/tpa cancel<tailwind:zinc:7>."
   received:
     to-you:
@@ -39,13 +40,14 @@ request:
       hover-text:
         - "<tailwind:zinc:4>Review the teleport request from <tailwind:sky>%player%<tailwind:zinc:4>."
         - ""
-        - "<tailwind:zinc:7>The request expires in <tailwind:amber>%remaining_time%<tailwind:zinc:7>."
+        - "<tailwind:zinc:7>The request expires after <tailwind:amber>%request_expiration_time%<tailwind:zinc:7>."
         - "<tailwind:sky>Click to view more information."
     teleport-you:
       message: "<tailwind:sky>%player%<tailwind:zinc:4> would like you to teleport to them. <tailwind:sky>Click here<tailwind:zinc:4> to review the request."
       hover-text:
         - "<tailwind:zinc:4>Review the teleport-here request from <tailwind:sky>%player%<tailwind:zinc:4>."
         - ""
+        - "<tailwind:zinc:7>The request expires after <tailwind:amber>%request_expiration_time%<tailwind:zinc:7>."
         - "<tailwind:sky>Click to view more information."
   accepted-target: "<tailwind:zinc:4>You <tailwind:lime>accepted<tailwind:zinc:4> the teleport request from <tailwind:sky>%player%<tailwind:zinc:4>."
   denied-target: "<tailwind:zinc:4>You <tailwind:red>denied<tailwind:zinc:4> the teleport request from <tailwind:sky>%player%<tailwind:zinc:4>."
@@ -59,10 +61,10 @@ request:
     title: "<tailwind:sky>Teleport request"
     teleport-to-you:
       - "<tailwind:sky>%player%<tailwind:zinc:4> would like to teleport to your current position."
-      - "<tailwind:zinc:7>This request expires in <tailwind:amber>%remaining_time%<tailwind:zinc:7>."
+      - "<tailwind:zinc:7>This request expires after <tailwind:amber>%request_expiration_time%<tailwind:zinc:7>."
     teleport-you-there:
       - "<tailwind:sky>%player%<tailwind:zinc:4> would like you to teleport to their current position."
-      - "<tailwind:zinc:7>This request expires in <tailwind:amber>%remaining_time%<tailwind:zinc:7>."
+      - "<tailwind:zinc:7>This request expires after <tailwind:amber>%request_expiration_time%<tailwind:zinc:7>."
     confirm-button: "<tailwind:lime>Accept request"
     confirm-tooltip: "<tailwind:zinc:4>Accept this request and begin the teleport."
     deny-button: "<tailwind:red>Decline request"

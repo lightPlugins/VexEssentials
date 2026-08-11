@@ -199,7 +199,8 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
         "teleport.request.sent.hover-text",
         Map.of(
             "player", target.name(),
-            "remaining_seconds", remainingSeconds(configuration.requestExpiration())
+            "request_expiration_seconds",
+            Long.toString(configuration.requestExpiration().toSeconds())
         ),
         "request-sent"
     );
@@ -224,6 +225,7 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
         target,
         request.requesterName(),
         request.type(),
+        Duration.between(request.createdAt(), request.expiresAt()),
         remaining
     ).thenCompose(choice -> switch (choice) {
       case ACCEPT -> accept(target, request);
@@ -328,14 +330,11 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
       store(incoming, incomingByTarget, request.targetId(), request);
       presentation.sendInteractiveRequest(
           target,
-          request.requestId(),
           request.type(),
-          Map.of(
-              "player", request.requesterName(),
-              "remaining_seconds", remainingSeconds(
-                  Duration.between(Instant.now(), request.expiresAt())
-              )
-          )
+          request.requesterName(),
+          Duration.between(request.createdAt(), request.expiresAt()),
+          Duration.between(Instant.now(), request.expiresAt()),
+          () -> review(target, request.requestId().toString())
       );
       scheduleExpiration(request, false);
     });
@@ -381,14 +380,19 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
     if (decision.state() != TeleportRequestState.ACCEPTING) {
       return;
     }
-    if (!isPending(request)
-        || !request.transition(TeleportRequestState.PENDING, TeleportRequestState.ACCEPTING)) {
-      sendCompletion(
-          request.targetId(),
-          request.requestId(),
-          false,
-          "The teleport request is no longer pending"
-      );
+    if (!isPending(request)) {
+      if (request.state() != TeleportRequestState.ACCEPTING
+          && request.state() != TeleportRequestState.EXECUTING) {
+        sendCompletion(
+            request.targetId(),
+            request.requestId(),
+            false,
+            "The teleport request is no longer pending"
+        );
+      }
+      return;
+    }
+    if (!request.transition(TeleportRequestState.PENDING, TeleportRequestState.ACCEPTING)) {
       return;
     }
     if (requester.isEmpty()) {
@@ -404,6 +408,9 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
     if (request.type() == TeleportRequestType.TO_TARGET) {
       if (decision.targetPosition() == null) {
         finishRequesterFailure(request, "The target position was unavailable");
+        return;
+      }
+      if (!startExecution(request)) {
         return;
       }
       execute(request, requester.get(), decision.targetPosition(), request.targetId());
@@ -423,7 +430,7 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
   public void receive(final TeleportRequestExecution execution) {
     TeleportRequest request = incoming.getIfPresent(execution.requestId()).orElse(null);
     if (request == null || request.type() != TeleportRequestType.TARGET_HERE
-        || request.state() != TeleportRequestState.ACCEPTING) {
+        || !startExecution(request)) {
       return;
     }
     players.find(request.targetId()).ifPresentOrElse(
@@ -500,17 +507,18 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
               outcome.successful(),
               outcome.detail()
           );
-          complete(request, movingPlayer.getUniqueId(), completion);
-          sendCompletion(
-              completionTarget,
-              completion.requestId(),
-              completion.successful(),
-              completion.detail()
-          );
+          if (complete(request, movingPlayer.getUniqueId(), completion)) {
+            sendCompletion(
+                completionTarget,
+                completion.requestId(),
+                completion.successful(),
+                completion.detail()
+            );
+          }
         });
   }
 
-  private void complete(
+  private boolean complete(
       final TeleportRequest request,
       final UUID localPlayerId,
       final TeleportRequestCompletion completion
@@ -518,7 +526,11 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
     TeleportRequestState finalState = completion.successful()
         ? TeleportRequestState.ACCEPTED
         : TeleportRequestState.FAILED;
-    request.transition(TeleportRequestState.ACCEPTING, finalState);
+    boolean transitioned = request.transition(TeleportRequestState.EXECUTING, finalState)
+        || request.transition(TeleportRequestState.ACCEPTING, finalState);
+    if (!transitioned) {
+      return false;
+    }
     players.find(localPlayerId).ifPresent(player -> presentation.send(
         player,
         completion.successful()
@@ -527,15 +539,18 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
         Map.of("player", otherName(request, localPlayerId)),
         completion.successful() ? "teleport-success" : "teleport-failed"
     ));
+    return true;
   }
 
   private void finishRequesterFailure(final TeleportRequest request, final String detail) {
-    complete(
+    boolean completed = complete(
         request,
         request.requesterId(),
         new TeleportRequestCompletion(request.requestId(), false, detail)
     );
-    sendCompletion(request.targetId(), request.requestId(), false, detail);
+    if (completed) {
+      sendCompletion(request.targetId(), request.requestId(), false, detail);
+    }
   }
 
   private void sendCompletion(
@@ -670,6 +685,10 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
     }
     request.transition(TeleportRequestState.PENDING, TeleportRequestState.EXPIRED);
     return false;
+  }
+
+  private boolean startExecution(final TeleportRequest request) {
+    return request.transition(TeleportRequestState.ACCEPTING, TeleportRequestState.EXECUTING);
   }
 
   private String otherName(final TeleportRequest request, final UUID localPlayerId) {

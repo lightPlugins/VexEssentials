@@ -4,6 +4,7 @@ package dev.vexsoft.essentials.api.teleport.request;
 public enum TeleportRequestState {
   PENDING,
   ACCEPTING,
+  EXECUTING,
   ACCEPTED,
   DENIED,
   CANCELLED,

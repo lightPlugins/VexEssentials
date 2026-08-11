@@ -17,6 +17,8 @@ public interface TeleportConfigurationService extends VexService {
 
   Duration warmup();
 
+  String warmupBypassPermission();
+
   boolean cancelWarmupOnMove();
 
   boolean cancelWarmupOnDamage();

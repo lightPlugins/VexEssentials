@@ -16,15 +16,15 @@ import dev.vexsoft.essentials.api.teleport.request.TeleportRequestType;
 import dev.vexsoft.essentials.paper.service.teleport.sound.TeleportSoundService;
 import dev.vexsoft.essentials.paper.teleport.presentation.RequestDialogChoice;
 import java.time.Duration;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -118,13 +118,20 @@ public final class VexTeleportPresentationService implements TeleportPresentatio
   @Override
   public void sendInteractiveRequest(
       final VexPlayer vexPlayer,
-      final UUID requestId,
       final TeleportRequestType type,
-      final Map<String, String> replacements
+      final String requesterName,
+      final Duration expiration,
+      final Duration lifetime,
+      final Runnable reviewAction
   ) {
     Objects.requireNonNull(vexPlayer, "player");
+    Objects.requireNonNull(type, "type");
+    String checkedRequester = Objects.requireNonNull(requesterName, "requesterName");
+    Duration checkedExpiration = Objects.requireNonNull(expiration, "expiration");
+    Duration checkedLifetime = Objects.requireNonNull(lifetime, "lifetime");
+    Runnable checkedReviewAction = Objects.requireNonNull(reviewAction, "reviewAction");
     Optional<Player> player = vexPlayer.findPlatformPlayer(Player.class);
-    if (player.isEmpty()) {
+    if (player.isEmpty() || checkedLifetime.isZero() || checkedLifetime.isNegative()) {
       return;
     }
     scheduler.runFor(player.get(), () -> {
@@ -132,12 +139,15 @@ public final class VexTeleportPresentationService implements TeleportPresentatio
         String root = type == TeleportRequestType.TO_TARGET
             ? "teleport.request.received.to-you"
             : "teleport.request.received.teleport-you";
-        Map<String, String> prepared = prepare(vexPlayer, replacements);
+        Map<String, String> prepared = prepare(
+            vexPlayer,
+            requestReplacements(checkedRequester, checkedExpiration)
+        );
         Component visible = component(vexPlayer, root + ".message", prepared);
         Component hover = component(vexPlayer, root + ".hover-text", prepared);
         Component prefix = component(vexPlayer, "general.prefix", Map.of());
         Component interactive = visible
-            .clickEvent(ClickEvent.runCommand("/tpa accept " + requestId))
+            .clickEvent(reviewCallback(player.get(), checkedLifetime, checkedReviewAction))
             .hoverEvent(HoverEvent.showText(hover));
         player.get().sendMessage(prefix.append(interactive));
         sounds.play(vexPlayer, "request-received");
@@ -153,6 +163,7 @@ public final class VexTeleportPresentationService implements TeleportPresentatio
       final VexPlayer vexPlayer,
       final String requesterName,
       final TeleportRequestType type,
+      final Duration expiration,
       final Duration remaining
   ) {
     Objects.requireNonNull(vexPlayer, "player");
@@ -164,7 +175,15 @@ public final class VexTeleportPresentationService implements TeleportPresentatio
     }
     scheduler.runFor(
         player.get(),
-        () -> openDialog(vexPlayer, player.get(), requesterName, type, remaining, result),
+        () -> openDialog(
+            vexPlayer,
+            player.get(),
+            requesterName,
+            type,
+            expiration,
+            remaining,
+            result
+        ),
         () -> result.complete(RequestDialogChoice.UNAVAILABLE)
     );
     return result;
@@ -175,13 +194,11 @@ public final class VexTeleportPresentationService implements TeleportPresentatio
       final Player player,
       final String requesterName,
       final TeleportRequestType type,
+      final Duration expiration,
       final Duration remaining,
       final CompletableFuture<RequestDialogChoice> result
   ) {
-    Map<String, String> replacements = Map.of(
-        "player", requesterName,
-        "remaining_seconds", Long.toString(Math.max(0, remaining.toSeconds()))
-    );
+    Map<String, String> replacements = requestReplacements(requesterName, expiration);
     replacements = prepare(vexPlayer, replacements);
     try {
       String bodyKey = type == TeleportRequestType.TO_TARGET
@@ -238,6 +255,25 @@ public final class VexTeleportPresentationService implements TeleportPresentatio
     };
   }
 
+  private ClickEvent<?> reviewCallback(
+      final Player recipient,
+      final Duration lifetime,
+      final Runnable reviewAction
+  ) {
+    return ClickEvent.callback(
+        audience -> {
+          if (audience instanceof Player clicked
+              && clicked.getUniqueId().equals(recipient.getUniqueId())) {
+            reviewAction.run();
+          }
+        },
+        ClickCallback.Options.builder()
+            .uses(ClickCallback.UNLIMITED_USES)
+            .lifetime(lifetime)
+            .build()
+    );
+  }
+
   private Component component(
       final VexPlayer player,
       final String key,
@@ -280,9 +316,34 @@ public final class VexTeleportPresentationService implements TeleportPresentatio
       final VexPlayer player,
       final Map<String, String> replacements
   ) {
-    String rawSeconds = replacements.get("remaining_seconds");
+    Map<String, String> prepared = new HashMap<>(replacements);
+    boolean changed = addDuration(
+        player,
+        replacements,
+        prepared,
+        "remaining_seconds",
+        "remaining_time"
+    );
+    changed |= addDuration(
+        player,
+        replacements,
+        prepared,
+        "request_expiration_seconds",
+        "request_expiration_time"
+    );
+    return changed ? Map.copyOf(prepared) : replacements;
+  }
+
+  private boolean addDuration(
+      final VexPlayer player,
+      final Map<String, String> source,
+      final Map<String, String> target,
+      final String secondsKey,
+      final String durationKey
+  ) {
+    String rawSeconds = source.get(secondsKey);
     if (rawSeconds == null) {
-      return replacements;
+      return false;
     }
     long seconds;
     try {
@@ -290,20 +351,29 @@ public final class VexTeleportPresentationService implements TeleportPresentatio
     } catch (NumberFormatException exception) {
       seconds = 0;
     }
-    String durationKey = seconds == 1
+    String localizationKey = seconds == 1
         ? "teleport.duration.second"
         : "teleport.duration.seconds";
     Component duration = component(
         player,
-        durationKey,
+        localizationKey,
         Map.of("seconds", Long.toString(seconds))
     );
-    Map<String, String> prepared = new HashMap<>(replacements);
-    prepared.put(
-        "remaining_time",
-        PlainTextComponentSerializer.plainText().serialize(duration)
+    target.put(durationKey, PlainTextComponentSerializer.plainText().serialize(duration));
+    return true;
+  }
+
+  private Map<String, String> requestReplacements(
+      final String requesterName,
+      final Duration expiration
+  ) {
+    if (expiration.isNegative() || expiration.isZero()) {
+      throw new IllegalArgumentException("expiration must be greater than zero");
+    }
+    return Map.of(
+        "player", requesterName,
+        "request_expiration_seconds", Long.toString(expiration.toSeconds())
     );
-    return Map.copyOf(prepared);
   }
 
   private void reportPresentationFailure(final String key, final Throwable throwable) {

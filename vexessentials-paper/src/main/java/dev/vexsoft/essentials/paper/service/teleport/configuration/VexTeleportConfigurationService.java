@@ -38,6 +38,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
   private volatile int maximumRequests = 10_000;
   private volatile Duration networkTimeout = Duration.ofSeconds(5);
   private volatile Duration warmup = Duration.ofSeconds(3);
+  private volatile String warmupBypassPermission = "vexessentials.teleport.warmup.bypass";
   private volatile boolean cancelWarmupOnMove = true;
   private volatile boolean cancelWarmupOnDamage = true;
 
@@ -77,6 +78,11 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
   }
 
   @Override
+  public String warmupBypassPermission() {
+    return warmupBypassPermission;
+  }
+
+  @Override
   public boolean cancelWarmupOnMove() {
     return cancelWarmupOnMove;
   }
@@ -104,38 +110,46 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
   @Override
   public synchronized boolean reload() {
     try {
-      VexConfiguration configuration = configurations.load("teleport.yml");
+      VexConfiguration configuration = configurations.load("settings.yml");
       Duration loadedExpiration = positiveDuration(
-          configuration.getLong("requests.expiration-seconds", 60),
-          "requests.expiration-seconds",
+          configuration.getLong("teleport.requests.expiration-seconds", 60),
+          "teleport.requests.expiration-seconds",
           Duration.ofSeconds(60)
       );
       Duration loadedCooldown = nonNegativeDuration(
-          configuration.getLong("requests.cooldown-seconds", 5),
-          "requests.cooldown-seconds",
+          configuration.getLong("teleport.requests.cooldown-seconds", 5),
+          "teleport.requests.cooldown-seconds",
           Duration.ofSeconds(5)
       );
       int loadedMaximum = positiveInt(
-          configuration.getInt("requests.maximum-cached", 10_000),
-          "requests.maximum-cached",
+          configuration.getInt("teleport.requests.maximum-cached", 10_000),
+          "teleport.requests.maximum-cached",
           10_000
       );
       Duration loadedNetworkTimeout = positiveDuration(
-          configuration.getLong("network.timeout-seconds", 5),
-          "network.timeout-seconds",
+          configuration.getLong("teleport.network.timeout-seconds", 5),
+          "teleport.network.timeout-seconds",
           Duration.ofSeconds(5)
       );
       Duration loadedWarmup = nonNegativeDuration(
-          configuration.getLong("teleport.warmup-seconds", 3),
-          "teleport.warmup-seconds",
+          configuration.getLong("teleport.warmup.duration-seconds", 3),
+          "teleport.warmup.duration-seconds",
           Duration.ofSeconds(3)
       );
+      String loadedWarmupBypassPermission = permission(
+          configuration.getString(
+              "teleport.warmup.bypass-permission",
+              "vexessentials.teleport.warmup.bypass"
+          ),
+          "teleport.warmup.bypass-permission",
+          "vexessentials.teleport.warmup.bypass"
+      );
       boolean loadedCancelOnMove = configuration.getBoolean(
-          "teleport.cancel-on-move",
+          "teleport.warmup.cancel-on-move",
           true
       );
       boolean loadedCancelOnDamage = configuration.getBoolean(
-          "teleport.cancel-on-damage",
+          "teleport.warmup.cancel-on-damage",
           true
       );
       Map<String, SoundProfile> loadedSounds = new HashMap<>();
@@ -150,6 +164,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
       maximumRequests = loadedMaximum;
       networkTimeout = loadedNetworkTimeout;
       warmup = loadedWarmup;
+      warmupBypassPermission = loadedWarmupBypassPermission;
       cancelWarmupOnMove = loadedCancelOnMove;
       cancelWarmupOnDamage = loadedCancelOnDamage;
       sounds.clear();
@@ -161,12 +176,13 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
       maximumRequests = 10_000;
       networkTimeout = Duration.ofSeconds(5);
       warmup = Duration.ofSeconds(3);
+      warmupBypassPermission = "vexessentials.teleport.warmup.bypass";
       cancelWarmupOnMove = true;
       cancelWarmupOnDamage = true;
       sounds.clear();
       sounds.putAll(DEFAULT_SOUNDS);
       warn(
-          "The file 'teleport.yml' could not be loaded. VexEssentials will use its safe "
+          "The file 'settings.yml' could not be loaded. VexEssentials will use its safe "
               + "default teleport settings instead.",
           exception
       );
@@ -179,7 +195,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
       final String event,
       final SoundProfile fallback
   ) {
-    String root = "sounds." + event;
+    String root = "teleport.sounds." + event;
     boolean enabled = configuration.getBoolean(root + ".enabled", fallback.enabled());
     String key = configuration.getString(root + ".key", fallback.key().asString())
         .trim().toLowerCase(
@@ -187,7 +203,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
     );
     if (!isNamespacedKey(key)) {
       warn(
-          "The sound configured at '" + root + ".key' in 'teleport.yml' could not be "
+          "The sound configured at '" + root + ".key' in 'settings.yml' could not be "
               + "used because '" + key + "' is not a valid namespaced key. Expected a value "
               + "such as 'minecraft:block.note_block.pling' or 'nexo:teleport_request'. "
               + "This sound has been disabled.",
@@ -211,7 +227,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
       source = Sound.Source.valueOf(sourceName.toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException exception) {
       warn(
-          "The sound source configured at '" + root + ".source' in 'teleport.yml' could not "
+          "The sound source configured at '" + root + ".source' in 'settings.yml' could not "
               + "be used because '" + sourceName + "' is unknown. Expected a source such as "
               + "'player', 'master', or 'ambient'. This sound has been disabled.",
           null
@@ -269,6 +285,15 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
     return fallback;
   }
 
+  private String permission(final String value, final String path, final String fallback) {
+    String permission = Objects.requireNonNullElse(value, "").trim().toLowerCase(Locale.ROOT);
+    if (!permission.isEmpty() && permission.matches("[a-z0-9._*-]+")) {
+      return permission;
+    }
+    warnValue(path, value, "a valid permission such as '" + fallback + "'", fallback);
+    return fallback;
+  }
+
   private float boundedFloat(final double value, final String path, final float fallback) {
     if (Double.isFinite(value) && value >= 0 && value <= 2) {
       return (float) value;
@@ -284,7 +309,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
       final Object fallback
   ) {
     warn(
-        "The value '" + value + "' configured at '" + path + "' in 'teleport.yml' is "
+        "The value '" + value + "' configured at '" + path + "' in 'settings.yml' is "
             + "invalid. Expected " + expected + ". VexEssentials will use '" + fallback
             + "' instead.",
         null

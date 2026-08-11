@@ -54,8 +54,11 @@ public final class VexTeleportWarmupService implements TeleportWarmupService, Au
     if (platformPlayer.isEmpty()) {
       return CompletableFuture.completedFuture(false);
     }
+    if (platformPlayer.get().hasPermission(configuration.warmupBypassPermission())) {
+      return CompletableFuture.completedFuture(true);
+    }
     CompletableFuture<Boolean> future = new CompletableFuture<>();
-    WarmupSession session = new WarmupSession(player, future);
+    WarmupSession session = new WarmupSession(player, future, duration.toSeconds());
     WarmupSession previous = sessions.put(playerId, session);
     if (previous != null) {
       previous.cancel();
@@ -66,12 +69,12 @@ public final class VexTeleportWarmupService implements TeleportWarmupService, Au
         Map.of("remaining_seconds", Long.toString(duration.toSeconds())),
         "warmup-start"
     );
-    long delayTicks = Math.max(1, (duration.toMillis() + 49) / 50);
     try {
-      scheduler.runForLater(
+      scheduler.runForTimer(
           platformPlayer.get(),
-          delayTicks,
-          () -> complete(playerId, session),
+          20,
+          20,
+          () -> tick(playerId, session),
           () -> cancel(playerId, WarmupCancelReason.LEFT)
       ).ifPresentOrElse(session::setTask, () -> cancel(playerId, WarmupCancelReason.LEFT));
     } catch (RuntimeException exception) {
@@ -113,6 +116,23 @@ public final class VexTeleportWarmupService implements TeleportWarmupService, Au
     }
   }
 
+  private void tick(final UUID playerId, final WarmupSession expected) {
+    if (sessions.get(playerId) != expected) {
+      return;
+    }
+    long remaining = expected.decrementRemainingSeconds();
+    if (remaining <= 0) {
+      complete(playerId, expected);
+      return;
+    }
+    presentation.send(
+        expected.player(),
+        "teleport.warmup.countdown",
+        Map.of("remaining_seconds", Long.toString(remaining)),
+        ""
+    );
+  }
+
   @Override
   public void close() {
     sessions.values().forEach(WarmupSession::cancel);
@@ -123,11 +143,17 @@ public final class VexTeleportWarmupService implements TeleportWarmupService, Au
 
     private final VexPlayer player;
     private final CompletableFuture<Boolean> future;
+    private long remainingSeconds;
     private volatile VexTask task;
 
-    private WarmupSession(final VexPlayer player, final CompletableFuture<Boolean> future) {
+    private WarmupSession(
+        final VexPlayer player,
+        final CompletableFuture<Boolean> future,
+        final long remainingSeconds
+    ) {
       this.player = player;
       this.future = future;
+      this.remainingSeconds = remainingSeconds;
     }
 
     private VexPlayer player() {
@@ -142,15 +168,24 @@ public final class VexTeleportWarmupService implements TeleportWarmupService, Au
     }
 
     private void complete() {
+      cancelTask();
       future.complete(true);
     }
 
     private void cancel() {
+      cancelTask();
+      future.complete(false);
+    }
+
+    private long decrementRemainingSeconds() {
+      return --remainingSeconds;
+    }
+
+    private void cancelTask() {
       VexTask currentTask = task;
       if (currentTask != null) {
         currentTask.cancel();
       }
-      future.complete(false);
     }
   }
 }
