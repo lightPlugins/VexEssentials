@@ -17,7 +17,7 @@ public interface WarpCommandService extends VexService {
 
   CompletableFuture<Boolean> list(VexPlayer player);
 
-  CompletableFuture<Boolean> create(VexPlayer player, String warpId);
+  CompletableFuture<Boolean> create(VexPlayer player, String warpId, String displayName);
 
   CompletableFuture<Boolean> update(VexPlayer player, String warpId);
 

@@ -13,6 +13,7 @@ import dev.vexsoft.essentials.api.warp.WarpChangeStatus;
 import dev.vexsoft.essentials.paper.service.teleport.execution.DirectTeleportService;
 import dev.vexsoft.essentials.paper.service.teleport.position.TeleportPositionService;
 import dev.vexsoft.essentials.paper.service.warp.presentation.WarpPresentationService;
+import dev.vexsoft.essentials.paper.service.warp.localization.WarpLocalizationConfigurationService;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
@@ -27,6 +28,7 @@ import org.bukkit.entity.Player;
 @Dependencies({
     WarpService.class,
     WarpLocalizationService.class,
+    WarpLocalizationConfigurationService.class,
     WarpPresentationService.class,
     EssentialsTeleportService.class,
     DirectTeleportService.class,
@@ -36,6 +38,7 @@ public final class VexWarpCommandService implements WarpCommandService {
 
   private final WarpService warps;
   private final WarpLocalizationService localization;
+  private final WarpLocalizationConfigurationService localizationConfiguration;
   private final WarpPresentationService presentation;
   private final EssentialsTeleportService teleports;
   private final DirectTeleportService directTeleports;
@@ -47,6 +50,7 @@ public final class VexWarpCommandService implements WarpCommandService {
     VexServiceRegistry checked = Objects.requireNonNull(services, "services");
     warps = checked.require(WarpService.class);
     localization = checked.require(WarpLocalizationService.class);
+    localizationConfiguration = checked.require(WarpLocalizationConfigurationService.class);
     presentation = checked.require(WarpPresentationService.class);
     teleports = checked.require(EssentialsTeleportService.class);
     directTeleports = checked.require(DirectTeleportService.class);
@@ -124,13 +128,17 @@ public final class VexWarpCommandService implements WarpCommandService {
   }
 
   @Override
-  public CompletableFuture<Boolean> create(final VexPlayer player, final String warpId) {
+  public CompletableFuture<Boolean> create(
+      final VexPlayer player,
+      final String warpId,
+      final String displayName
+  ) {
     String normalized = normalize(player, warpId);
     if (normalized == null) {
       return CompletableFuture.completedFuture(false);
     }
     return positions.capture(player).thenCompose(position -> position
-        .map(value -> create(player, normalized, value))
+        .map(value -> create(player, normalized, displayName, value))
         .orElseGet(() -> {
           presentation.send(player, "warp.position-unavailable", Map.of(), "teleport-failed");
           return CompletableFuture.completedFuture(false);
@@ -185,9 +193,16 @@ public final class VexWarpCommandService implements WarpCommandService {
   private CompletableFuture<Boolean> create(
       final VexPlayer player,
       final String id,
-      final ServerPosition position
+      final String displayName,
+    final ServerPosition position
   ) {
     return warps.create(id, position, player.getUniqueId()).thenApply(status -> {
+      if (status == WarpChangeStatus.CREATED) {
+        String visualName = displayName == null || displayName.isBlank()
+            ? id
+            : displayName.trim();
+        localizationConfiguration.createDefaults(id, visualName);
+      }
       String key = status == WarpChangeStatus.CREATED
           ? "warp.created"
           : "warp.already-exists";

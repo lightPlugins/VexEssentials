@@ -3,6 +3,9 @@ not-found: "<tailwind:red>The warp <tailwind:red:7>%warp%<tailwind:red> could no
 access-denied: "<tailwind:red>You do not have permission to travel to <tailwind:red:7>%warp%<tailwind:red>."
 position-unavailable: "<tailwind:red>Your current position could not be captured, so the warp was not changed."
 storage-error: "<tailwind:red>The shared warp data is currently unavailable. Please try again shortly."
+default-warp-description:
+  - "<tailwind:zinc:4>Default warp description"
+  - "<tailwind:red:4>Change me please :("
 already-exists: "<tailwind:red>The warp <tailwind:red:7>%warp%<tailwind:red> already exists. Use <tailwind:red:7>/warp update %warp%<tailwind:red> to move it."
 created: "<tailwind:zinc:4>The warp <tailwind:sky>%warp%<tailwind:zinc:4> was created <tailwind:lime>successfully<tailwind:zinc:4>."
 updated: "<tailwind:zinc:4>The position of <tailwind:sky>%warp%<tailwind:zinc:4> was updated <tailwind:lime>successfully<tailwind:zinc:4>."

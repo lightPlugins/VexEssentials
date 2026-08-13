@@ -6,6 +6,8 @@ import dev.vexsoft.core.paper.command.Argument;
 import dev.vexsoft.core.paper.command.Command;
 import dev.vexsoft.core.paper.command.CommandRoot;
 import dev.vexsoft.core.paper.command.VexCommandSource;
+import dev.vexsoft.core.paper.command.Greedy;
+import dev.vexsoft.core.paper.command.OptionalArgument;
 import dev.vexsoft.essentials.paper.service.warp.command.WarpCommandContext;
 import dev.vexsoft.essentials.paper.service.warp.command.WarpCommandService;
 import java.util.Objects;
@@ -26,11 +28,15 @@ public final class WarpCreateCommand {
   }
 
   /** Creates a global warp at the sender's exact position. */
-  @Command(value = "create <warp>", permission = "vexessentials.command.warp.create")
+  @Command(
+      value = "create <warp> [display-name]",
+      permission = "vexessentials.command.warp.create"
+  )
   public CompletableFuture<Boolean> create(
       final VexCommandSource source,
-      @Argument("warp") final String warp
+      @Argument("warp") final String warp,
+      @OptionalArgument("display-name") @Greedy final String displayName
   ) {
-    return commands.create(context.player(source), warp);
+    return commands.create(context.player(source), warp, displayName);
   }
 }

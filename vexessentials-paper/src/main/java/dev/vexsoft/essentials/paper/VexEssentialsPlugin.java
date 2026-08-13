@@ -38,6 +38,8 @@ import dev.vexsoft.essentials.paper.service.warp.command.VexWarpCommandService;
 import dev.vexsoft.essentials.paper.service.warp.command.WarpCommandContext;
 import dev.vexsoft.essentials.paper.service.warp.command.WarpCommandService;
 import dev.vexsoft.essentials.paper.service.warp.localization.VexWarpLocalizationService;
+import dev.vexsoft.essentials.paper.service.warp.localization.WarpLocalizationConfigurationService;
+import dev.vexsoft.essentials.paper.service.warp.localization.VexWarpLocalizationConfigurationService;
 import dev.vexsoft.essentials.paper.service.warp.presentation.VexWarpPresentationService;
 import dev.vexsoft.essentials.paper.service.warp.presentation.WarpPresentationService;
 import dev.vexsoft.essentials.paper.teleport.command.BackCommand;
@@ -88,6 +90,10 @@ public final class VexEssentialsPlugin extends VexPlugin {
     getServices().register(
         WarpLocalizationService.class,
         VexWarpLocalizationService.class
+    );
+    getServices().register(
+        WarpLocalizationConfigurationService.class,
+        VexWarpLocalizationConfigurationService.class
     );
     getServices().register(
         WarpPresentationService.class,
