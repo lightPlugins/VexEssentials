@@ -74,6 +74,7 @@ public final class VexWarpCommandService implements WarpCommandService {
         );
         return CompletableFuture.completedFuture(false);
       }
+      String destinationName = displayName(player, destination);
       return teleports.teleport(
           player.getUniqueId(),
           destination.position(),
@@ -82,7 +83,7 @@ public final class VexWarpCommandService implements WarpCommandService {
         presentation.send(
             player,
             outcome.successful() ? "warp.teleport-success" : "warp.teleport-failed",
-            Map.of("warp", displayName(player, destination)),
+            Map.of("warp", destinationName),
             outcome.successful() ? "teleport-success" : "teleport-failed"
         );
         return outcome.successful();

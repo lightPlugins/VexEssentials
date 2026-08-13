@@ -2,10 +2,14 @@ teleport:
   requests:
     # How long a teleport request remains valid. This value is also shown in its messages.
     expiration-seconds: 60
+    # Minimum time before a player can send another teleport request. Set to 0 to disable.
     cooldown-seconds: 5
+    # Maximum number of active requests kept in memory. Old requests are discarded first.
+    # ONLY CHANGE THIS IF YOU KNOW WHAT YOU'RE DOING
     maximum-cached: 10000
 
   network:
+    # Maximum time to wait for a cross-server teleport operation before it is treated as failed.
     timeout-seconds: 5
 
   warmup:
@@ -13,53 +17,67 @@ teleport:
     duration-seconds: 3
     # Players with this permission skip the preparation and teleport immediately.
     bypass-permission: vexessentials.teleport.warmup.bypass
+    # Cancel the preparation when the player changes position.
     cancel-on-move: true
+    # Cancel the preparation when the player takes damage.
     cancel-on-damage: true
 
-  # Namespaced Adventure keys also support custom resource-pack sounds
+  # Sounds played to the affected player during the different stages of a teleport.
+  # Set "enabled" to false to disable an individual sound.
+  # "key" accepts namespaced Minecraft and custom resource-pack sound keys.
+  # "source" is an Adventure sound source, for example player, master, ambient, or voice.
+  # "volume" and "pitch" accept values from 0 to 2.
   sounds:
+    # Played for the player who sends a teleport request.
     request-sent:
       enabled: true
       key: minecraft:block.note_block.pling
       source: player
       volume: 0.8
       pitch: 1.2
+    # Played for the player who receives a teleport request.
     request-received:
       enabled: true
       key: minecraft:block.note_block.pling
       source: player
       volume: 0.9
       pitch: 1.0
+    # Played when a teleport request is accepted.
     request-accepted:
       enabled: true
       key: minecraft:entity.player.levelup
       source: player
       volume: 0.8
       pitch: 1.1
+    # Played when a request is denied, cancelled, or expires.
     request-denied:
       enabled: true
       key: minecraft:block.note_block.bass
       source: player
       volume: 0.8
       pitch: 0.8
+    # Played when the teleport preparation begins.
     warmup-start:
       enabled: true
       key: minecraft:block.note_block.hat
       source: player
       volume: 0.7
       pitch: 1.1
+    # Played when movement or damage cancels the preparation.
     teleport-cancelled:
       enabled: true
       key: minecraft:block.note_block.bass
       source: player
       volume: 0.8
       pitch: 0.7
+    # Played after a teleport completes successfully.
     teleport-success:
       enabled: true
       key: minecraft:entity.enderman.teleport
       source: player
       volume: 0.8
       pitch: 1.0
+    # Played when a teleport cannot be completed.
     teleport-failed:
       enabled: true
       key: minecraft:block.note_block.bass

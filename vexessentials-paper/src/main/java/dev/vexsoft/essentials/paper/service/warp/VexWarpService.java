@@ -162,7 +162,7 @@ public final class VexWarpService implements WarpService, AutoCloseable {
           "The warp service has not been initialized"
       ));
     }
-    return globalData.get(VexEssentialsGlobalData.WARPS)
+    return globalData.refresh(VexEssentialsGlobalData.WARPS)
         .thenAccept(this::applySnapshot)
         .whenComplete((ignored, throwable) -> {
           if (throwable != null) {

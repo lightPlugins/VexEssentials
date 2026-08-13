@@ -69,6 +69,10 @@ public final class VexWarpPresentationService implements WarpPresentationService
       final String soundEvent
   ) {
     Objects.requireNonNull(player, "player");
+    if (player.findPlatformPlayer(Player.class).isEmpty()
+        || player.findContainer(LanguageContainer.class).isEmpty()) {
+      return;
+    }
     try {
       boolean withPrefix = !localization.resolve(
           player.getContainer(LanguageContainer.class).getLanguage().getKey(),

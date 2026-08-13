@@ -1,36 +1,9 @@
-warp:
-  invalid-id: "<tailwind:red>The warp ID <tailwind:red:7>%warp%<tailwind:red> is invalid. Use a letter first, followed only by letters, numbers, underscores, or hyphens."
-  not-found: "<tailwind:red>The warp <tailwind:red:7>%warp%<tailwind:red> could not be found."
-  access-denied: "<tailwind:red>You do not have permission to travel to <tailwind:red:7>%warp%<tailwind:red>."
-  position-unavailable: "<tailwind:red>Your current position could not be captured, so the warp was not changed."
-  storage-error: "<tailwind:red>The shared warp data is currently unavailable. Please try again shortly."
-  already-exists: "<tailwind:red>The warp <tailwind:red:7>%warp%<tailwind:red> already exists. Use <tailwind:red:7>/warp update %warp%<tailwind:red> to move it."
-  created: "<tailwind:zinc:4>The warp <tailwind:sky>%warp%<tailwind:zinc:4> was created <tailwind:lime>successfully<tailwind:zinc:4>."
-  updated: "<tailwind:zinc:4>The position of <tailwind:sky>%warp%<tailwind:zinc:4> was updated <tailwind:lime>successfully<tailwind:zinc:4>."
-  deleted: "<tailwind:zinc:4>The warp <tailwind:sky>%warp%<tailwind:zinc:4> was deleted <tailwind:lime>successfully<tailwind:zinc:4>."
-  teleport-success: "<tailwind:zinc:4>You were teleported to <tailwind:sky>%warp%<tailwind:zinc:4> <tailwind:lime>successfully<tailwind:zinc:4>."
-  teleport-failed: "<tailwind:red>You could not be teleported to <tailwind:red:7>%warp%<tailwind:red>."
-  list:
-    header: "<tailwind:zinc:4>Available warps:"
-    empty: "<tailwind:zinc:7>No warps are currently available to you."
-    entry-prefix: "<tailwind:zinc:7> • "
-  delete-dialog:
-    title: "<tailwind:red>Delete warp"
-    body:
-      - "<tailwind:zinc:4>Do you really want to delete the warp <tailwind:sky>%warp%<tailwind:zinc:4>?"
-      - "<tailwind:red>This action cannot be undone."
-    confirm-button: "<tailwind:red>Delete warp"
-    confirm-tooltip: "<tailwind:zinc:4>Permanently delete <tailwind:sky>%warp%<tailwind:zinc:4>."
-    cancel-button: "<tailwind:zinc:4>Keep warp"
-    cancel-tooltip: "<tailwind:zinc:4>Close this dialog without changing the warp."
-
 # Warp presentation values are localized separately from their stable command IDs.
 # Every description is a list so it can be shown as a multi-line hover text.
 # Example:
-# warps:
-#   spawn:
-#     name: "<tailwind:sky>Spawn"
-#     description:
-#       - "<tailwind:zinc:4>The central starting point of the server."
-#       - "<tailwind:zinc:7>Shops and important features are located nearby."
-warps: { }
+# spawn:
+#   name: "<tailwind:sky>Spawn"
+#   description:
+#     - "<tailwind:zinc:4>The central starting point of the server."
+#     - "<tailwind:zinc:7>Shops and important features are located nearby."
+{}

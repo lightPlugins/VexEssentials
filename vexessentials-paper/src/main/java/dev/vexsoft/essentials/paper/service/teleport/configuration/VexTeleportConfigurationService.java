@@ -110,7 +110,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
   @Override
   public synchronized boolean reload() {
     try {
-      VexConfiguration configuration = configurations.load("settings.yml");
+      VexConfiguration configuration = configurations.load("teleport-settings.yml");
       Duration loadedExpiration = positiveDuration(
           configuration.getLong("teleport.requests.expiration-seconds", 60),
           "teleport.requests.expiration-seconds",
@@ -182,7 +182,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
       sounds.clear();
       sounds.putAll(DEFAULT_SOUNDS);
       warn(
-          "The file 'settings.yml' could not be loaded. VexEssentials will use its safe "
+          "The file 'teleport-settings.yml' could not be loaded. VexEssentials will use its safe "
               + "default teleport settings instead.",
           exception
       );
@@ -203,7 +203,7 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
     );
     if (!isNamespacedKey(key)) {
       warn(
-          "The sound configured at '" + root + ".key' in 'settings.yml' could not be "
+          "The sound configured at '" + root + ".key' in 'teleport-settings.yml' could not be "
               + "used because '" + key + "' is not a valid namespaced key. Expected a value "
               + "such as 'minecraft:block.note_block.pling' or 'nexo:teleport_request'. "
               + "This sound has been disabled.",
@@ -227,7 +227,8 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
       source = Sound.Source.valueOf(sourceName.toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException exception) {
       warn(
-          "The sound source configured at '" + root + ".source' in 'settings.yml' could not "
+          "The sound source configured at '" + root
+              + ".source' in 'teleport-settings.yml' could not "
               + "be used because '" + sourceName + "' is unknown. Expected a source such as "
               + "'player', 'master', or 'ambient'. This sound has been disabled.",
           null
@@ -309,7 +310,8 @@ public final class VexTeleportConfigurationService implements TeleportConfigurat
       final Object fallback
   ) {
     warn(
-        "The value '" + value + "' configured at '" + path + "' in 'settings.yml' is "
+        "The value '" + value + "' configured at '" + path
+            + "' in 'teleport-settings.yml' is "
             + "invalid. Expected " + expected + ". VexEssentials will use '" + fallback
             + "' instead.",
         null

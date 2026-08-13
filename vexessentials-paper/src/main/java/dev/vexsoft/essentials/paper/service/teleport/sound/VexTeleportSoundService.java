@@ -50,7 +50,8 @@ public final class VexTeleportSoundService implements TeleportSoundService {
     } catch (IllegalArgumentException exception) {
       logger.warning(
           "The configured sound event '" + event + "' could not be played because its key or "
-              + "source is invalid. Check 'teleport.sounds." + event + "' in 'settings.yml'."
+              + "source is invalid. Check 'teleport.sounds." + event
+              + "' in 'teleport-settings.yml'."
       );
     }
   }
