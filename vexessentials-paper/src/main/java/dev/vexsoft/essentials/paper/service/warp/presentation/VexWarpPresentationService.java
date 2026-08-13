@@ -101,7 +101,7 @@ public final class VexWarpPresentationService implements WarpPresentationService
         Component output = component(vexPlayer, "warp.list.header", Map.of());
         if (checkedWarps.isEmpty()) {
           output = output.append(Component.newline())
-              .append(component(vexPlayer, "warp.list.empty", Map.of()));
+              .append(component(vexPlayer, "warp.list.no-warps", Map.of()));
         } else {
           for (Warp warp : checkedWarps) {
             Component name = warpLocalization.getName(vexPlayer, warp);
@@ -109,9 +109,13 @@ public final class VexWarpPresentationService implements WarpPresentationService
             if (!description.isEmpty()) {
               name = name.hoverEvent(HoverEvent.showText(join(description)));
             }
+            Component displayName = name;
+            Component entry = component(vexPlayer, "warp.list.entry", Map.of())
+                .replaceText(builder -> builder
+                    .matchLiteral("%warp-name%")
+                    .replacement(displayName));
             output = output.append(Component.newline())
-                .append(component(vexPlayer, "warp.list.entry-prefix", Map.of()))
-                .append(name);
+                .append(entry);
           }
         }
         platformPlayer.get().sendMessage(output);

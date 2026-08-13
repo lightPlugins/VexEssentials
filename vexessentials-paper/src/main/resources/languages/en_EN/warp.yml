@@ -13,9 +13,12 @@ deleted: "<tailwind:zinc:4>The warp <tailwind:sky>%warp%<tailwind:zinc:4> was de
 teleport-success: "<tailwind:zinc:4>You were teleported to <tailwind:sky>%warp%<tailwind:zinc:4> <tailwind:lime>successfully<tailwind:zinc:4>."
 teleport-failed: "<tailwind:red>You could not be teleported to <tailwind:red:7>%warp%<tailwind:red>."
 list:
-  header: "<tailwind:zinc:4>Available warps:"
-  empty: "<tailwind:zinc:7>No warps are currently available to you."
-  entry-prefix: "<tailwind:zinc:7> • "
+  header:
+    - "<tailwind:zinc:4>Available warps:"
+  no-warps:
+    - "<tailwind:zinc:7>No warps are currently available to you."
+  entry:
+    - "<tailwind:zinc:7> • %warp-name%"
 delete-dialog:
   title: "<tailwind:red>Delete warp"
   body:
