@@ -29,7 +29,6 @@ request:
   expired: "<tailwind:red>This teleport request has already expired."
   already-handled: "<tailwind:red>This teleport request has already been handled."
   delivery-failed: "<tailwind:red>Your teleport request could not be delivered to <tailwind:red:7>%player%<tailwind:red>."
-  blocked: "<tailwind:red>You cannot exchange teleport requests with this player."
   target-disabled: "<tailwind:red>This player is not accepting teleport requests."
   duplicate: "<tailwind:red>You already have a matching pending teleport request for this player."
   toggle-enabled: "<tailwind:zinc:4>You are now <tailwind:lime>accepting<tailwind:zinc:4> teleport requests."

@@ -8,15 +8,6 @@ import dev.vexsoft.core.paper.plugin.VexPlugin;
 import dev.vexsoft.core.paper.service.commands.CommandService;
 import dev.vexsoft.core.paper.service.listeners.ListenerService;
 import dev.vexsoft.essentials.api.service.teleport.EssentialsTeleportService;
-import dev.vexsoft.essentials.api.service.socialblock.SocialBlockService;
-import dev.vexsoft.essentials.api.socialblock.SocialBlockContainer;
-import dev.vexsoft.essentials.paper.service.socialblock.VexSocialBlockService;
-import dev.vexsoft.essentials.paper.service.socialblock.container.VexSocialBlockContainer;
-import dev.vexsoft.essentials.paper.service.socialblock.presentation.SocialBlockPresentationService;
-import dev.vexsoft.essentials.paper.service.socialblock.presentation.VexSocialBlockPresentationService;
-import dev.vexsoft.essentials.paper.socialblock.command.BlockCommand;
-import dev.vexsoft.essentials.paper.socialblock.command.BlockListCommand;
-import dev.vexsoft.essentials.paper.socialblock.command.UnblockCommand;
 import dev.vexsoft.essentials.api.service.warp.WarpLocalizationService;
 import dev.vexsoft.essentials.api.service.warp.WarpService;
 import dev.vexsoft.essentials.api.teleport.container.TeleportContainer;
@@ -86,11 +77,6 @@ public final class VexEssentialsPlugin extends VexPlugin {
 
   @Override
   protected void registerServices() {
-    getServices().register(SocialBlockService.class, VexSocialBlockService.class);
-    getServices().register(
-        SocialBlockPresentationService.class,
-        VexSocialBlockPresentationService.class
-    );
     getServices().register(
         TeleportConfigurationService.class,
         VexTeleportConfigurationService.class
@@ -131,7 +117,6 @@ public final class VexEssentialsPlugin extends VexPlugin {
 
   @Override
   protected void registerContainers(final PlayerContainerService containers) {
-    containers.register(SocialBlockContainer.class, VexSocialBlockContainer::new);
     containers.register(
         TeleportContainer.class,
         player -> new VexTeleportContainer(player, getLogger())
@@ -169,9 +154,6 @@ public final class VexEssentialsPlugin extends VexPlugin {
     commands.register(TeleportDenyCommand.class);
     commands.register(TeleportCancelCommand.class);
     commands.register(TeleportToggleCommand.class);
-    commands.register(BlockCommand.class);
-    commands.register(UnblockCommand.class);
-    commands.register(BlockListCommand.class);
     commands.register(BackCommand.class);
     commands.register(WarpTeleportCommand.class);
     commands.register(WarpListCommand.class);

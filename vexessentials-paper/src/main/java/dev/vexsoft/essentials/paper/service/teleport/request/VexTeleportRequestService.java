@@ -17,7 +17,6 @@ import dev.vexsoft.core.cache.VexCache;
 import dev.vexsoft.core.cache.VexCacheOptions;
 import dev.vexsoft.core.paper.service.scheduler.ScheduleService;
 import dev.vexsoft.essentials.api.service.teleport.EssentialsTeleportService;
-import dev.vexsoft.essentials.api.socialblock.SocialBlockContainer;
 import dev.vexsoft.essentials.api.teleport.TeleportOptions;
 import dev.vexsoft.essentials.api.teleport.container.TeleportContainer;
 import dev.vexsoft.essentials.api.teleport.request.TeleportRequestRejectionReason;
@@ -159,10 +158,6 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
       final TeleportRequestType type,
       final Instant now
   ) {
-    if (requester.getContainer(SocialBlockContainer.class).hasBlocked(target.uniqueId())) {
-      presentation.send(requester, "teleport.request.blocked", Map.of(), "teleport-failed");
-      return CompletableFuture.completedFuture(false);
-    }
     if (players.find(target.uniqueId()).isPresent()) {
       return registerRequest(requester, target, type, now);
     }
@@ -594,15 +589,14 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
       final VexPlayer target,
       final TeleportRequest request
   ) {
-    if (!target.getContainer(TeleportContainer.class).acceptsRequests()
-        || target.getContainer(SocialBlockContainer.class).hasBlocked(request.requesterId())) {
+    if (!target.getContainer(TeleportContainer.class).acceptsRequests()) {
       if (request.transition(TeleportRequestState.PENDING, TeleportRequestState.DENIED)) {
         deliverDecision(
             request.requesterId(),
             new TeleportRequestDecision(request.requestId(), TeleportRequestState.DENIED, null)
         );
       }
-      presentation.send(target, "teleport.request.blocked", Map.of(), "teleport-failed");
+      presentation.send(target, "teleport.request.toggle-disabled", Map.of(), "teleport-failed");
       return CompletableFuture.completedFuture(false);
     }
     if (!request.transition(TeleportRequestState.PENDING, TeleportRequestState.ACCEPTING)) {
@@ -864,9 +858,6 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
     if (!target.getContainer(TeleportContainer.class).acceptsRequests()) {
       return TeleportRequestRejectionReason.REQUESTS_DISABLED;
     }
-    if (target.getContainer(SocialBlockContainer.class).hasBlocked(offer.requesterId())) {
-      return TeleportRequestRejectionReason.BLOCKED;
-    }
     ConcurrentLinkedDeque<UUID> index = incomingByTarget.get(target.getUniqueId());
     if (index != null) {
       for (UUID requestId : index) {
@@ -883,7 +874,6 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
 
   private String admissionMessage(final TeleportRequestRejectionReason reason) {
     return switch (reason) {
-      case BLOCKED -> "teleport.request.blocked";
       case REQUESTS_DISABLED -> "teleport.request.target-disabled";
       case DUPLICATE -> "teleport.request.duplicate";
       case TARGET_UNAVAILABLE, NONE -> "teleport.request.delivery-failed";
