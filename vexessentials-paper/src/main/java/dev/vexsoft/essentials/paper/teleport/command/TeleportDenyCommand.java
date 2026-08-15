@@ -4,49 +4,40 @@ import dev.vexsoft.core.api.player.VexPlayer;
 import dev.vexsoft.core.api.service.player.PlayerService;
 import dev.vexsoft.core.api.service.registry.Dependencies;
 import dev.vexsoft.core.api.service.registry.VexServiceRegistry;
-import dev.vexsoft.core.paper.command.Argument;
 import dev.vexsoft.core.paper.command.Command;
 import dev.vexsoft.core.paper.command.CommandRoot;
+import dev.vexsoft.core.paper.command.OptionalArgument;
 import dev.vexsoft.core.paper.command.Suggest;
 import dev.vexsoft.core.paper.command.VexCommandSource;
-import dev.vexsoft.core.paper.command.suggestion.PlayerNameSuggestionProvider;
-import dev.vexsoft.essentials.api.teleport.request.TeleportRequestType;
 import dev.vexsoft.essentials.paper.service.teleport.request.TeleportRequestService;
+import dev.vexsoft.essentials.paper.teleport.command.suggestion.PendingTeleportRequestSuggestionProvider;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import org.bukkit.entity.Player;
 
-/** Player-facing teleport request commands. */
-@CommandRoot(
-    name = "tpa",
-    description = "Requests a teleport from another player",
-    aliases = {"teleportask"},
-    playerOnly = true
-)
+/** Denies a selected incoming teleport request. */
+@CommandRoot(name = "tpdeny", description = "Denies a teleport request", playerOnly = true)
 @Dependencies({PlayerService.class, TeleportRequestService.class})
-public final class TeleportRequestCommand {
+public final class TeleportDenyCommand {
 
   private final PlayerService players;
   private final TeleportRequestService requests;
 
-  /** Creates the request command. */
-  public TeleportRequestCommand(final VexServiceRegistry services) {
+  public TeleportDenyCommand(final VexServiceRegistry services) {
     VexServiceRegistry checked = Objects.requireNonNull(services, "services");
     players = checked.require(PlayerService.class);
     requests = checked.require(TeleportRequestService.class);
   }
 
-  /** Requests permission to teleport to another player. */
-  @Command(value = "<player>", permission = "vexessentials.command.tpa")
-  public CompletableFuture<Boolean> request(
+  @Command(value = "[request]", permission = "vexessentials.command.tpdeny")
+  public int deny(
       final VexCommandSource source,
-      @Argument("player") @Suggest(PlayerNameSuggestionProvider.class) final String targetName
+      @OptionalArgument("request")
+      @Suggest(PendingTeleportRequestSuggestionProvider.class) final String selector
   ) {
-    return requests.send(player(source), targetName, TeleportRequestType.TO_TARGET);
+    return requests.deny(player(source), selector) ? 1 : 0;
   }
 
   private VexPlayer player(final VexCommandSource source) {
-    Player player = (Player) source.getSender();
-    return players.require(player.getUniqueId());
+    return players.require(((Player) source.getSender()).getUniqueId());
   }
 }

@@ -17,7 +17,10 @@ import dev.vexsoft.core.cache.VexCache;
 import dev.vexsoft.core.cache.VexCacheOptions;
 import dev.vexsoft.core.paper.service.scheduler.ScheduleService;
 import dev.vexsoft.essentials.api.service.teleport.EssentialsTeleportService;
+import dev.vexsoft.essentials.api.socialblock.SocialBlockContainer;
 import dev.vexsoft.essentials.api.teleport.TeleportOptions;
+import dev.vexsoft.essentials.api.teleport.container.TeleportContainer;
+import dev.vexsoft.essentials.api.teleport.request.TeleportRequestRejectionReason;
 import dev.vexsoft.essentials.api.teleport.request.TeleportRequestState;
 import dev.vexsoft.essentials.api.teleport.request.TeleportRequestType;
 import dev.vexsoft.essentials.paper.service.teleport.configuration.TeleportConfigurationService;
@@ -25,6 +28,7 @@ import dev.vexsoft.essentials.paper.service.teleport.position.TeleportPositionSe
 import dev.vexsoft.essentials.paper.service.teleport.presentation.TeleportPresentationService;
 import dev.vexsoft.essentials.paper.teleport.messaging.TeleportMessages;
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestCompletion;
+import dev.vexsoft.essentials.api.teleport.request.TeleportRequestAdmission;
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestDecision;
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestExecution;
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestOffer;
@@ -74,6 +78,8 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
   private final Map<UUID, ConcurrentLinkedDeque<UUID>> incomingByTarget =
       new ConcurrentHashMap<>();
   private final Map<UUID, ConcurrentLinkedDeque<UUID>> outgoingByRequester =
+      new ConcurrentHashMap<>();
+  private final Map<UUID, CompletableFuture<Boolean>> pendingAdmissions =
       new ConcurrentHashMap<>();
 
   /** Creates the request coordinator and its bounded runtime caches. */
@@ -153,10 +159,14 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
       final TeleportRequestType type,
       final Instant now
   ) {
-    if (players.find(target.uniqueId()).isPresent()) {
-      return CompletableFuture.completedFuture(registerRequest(requester, target, type, now));
+    if (requester.getContainer(SocialBlockContainer.class).hasBlocked(target.uniqueId())) {
+      presentation.send(requester, "teleport.request.blocked", Map.of(), "teleport-failed");
+      return CompletableFuture.completedFuture(false);
     }
-    return directory.find(target.uniqueId()).thenApply(networkPlayer -> {
+    if (players.find(target.uniqueId()).isPresent()) {
+      return registerRequest(requester, target, type, now);
+    }
+    return directory.find(target.uniqueId()).thenCompose(networkPlayer -> {
       if (networkPlayer.isEmpty()) {
         presentation.send(
             requester,
@@ -164,13 +174,13 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
             Map.of("player", target.name()),
             "teleport-failed"
         );
-        return false;
+        return CompletableFuture.completedFuture(false);
       }
       return registerRequest(requester, target, type, now);
     });
   }
 
-  private boolean registerRequest(
+  private CompletableFuture<Boolean> registerRequest(
       final VexPlayer requester,
       final PlayerIdentity target,
       final TeleportRequestType type,
@@ -179,33 +189,37 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
     Instant expiresAt = now.plus(configuration.requestExpiration());
     TeleportRequest request = new TeleportRequest(
         UUID.randomUUID(), requester.getUniqueId(), requester.getName(), target.uniqueId(),
-        target.name(), type, now, expiresAt, TeleportRequestState.PENDING
+        target.name(), type, now, expiresAt, TeleportRequestState.AWAITING_ADMISSION
     );
     store(outgoing, outgoingByRequester, request.requesterId(), request);
+    CompletableFuture<Boolean> admission = new CompletableFuture<>();
+    pendingAdmissions.put(request.requestId(), admission);
     if (!deliverOffer(request.targetId(), offer(request))) {
-      request.transition(TeleportRequestState.PENDING, TeleportRequestState.FAILED);
+      request.transition(TeleportRequestState.AWAITING_ADMISSION, TeleportRequestState.FAILED);
+      pendingAdmissions.remove(request.requestId());
       presentation.send(
           requester,
           "teleport.request.delivery-failed",
           Map.of("player", target.name()),
           "teleport-failed"
       );
-      return false;
+      return CompletableFuture.completedFuture(false);
     }
-    cooldowns.put(requester.getUniqueId(), now.plus(configuration.requestCooldown()));
-    presentation.sendWithHover(
-        requester,
-        "teleport.request.sent.message",
-        "teleport.request.sent.hover-text",
-        Map.of(
-            "player", target.name(),
-            "request_expiration_seconds",
-            Long.toString(configuration.requestExpiration().toSeconds())
-        ),
-        "request-sent"
-    );
-    scheduleExpiration(request, true);
-    return true;
+    scheduler.runAsyncLater(configuration.networkTimeout(), () -> {
+      CompletableFuture<Boolean> waiting = pendingAdmissions.remove(request.requestId());
+      if (waiting == null) {
+        return;
+      }
+      request.transition(TeleportRequestState.AWAITING_ADMISSION, TeleportRequestState.FAILED);
+      players.find(request.requesterId()).ifPresent(player -> presentation.send(
+          player,
+          "teleport.request.delivery-failed",
+          Map.of("player", request.targetName()),
+          "teleport-failed"
+      ));
+      waiting.complete(false);
+    });
+    return admission;
   }
 
   @Override
@@ -228,7 +242,7 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
         Duration.between(request.createdAt(), request.expiresAt()),
         remaining
     ).thenCompose(choice -> switch (choice) {
-      case ACCEPT -> accept(target, request);
+      case ACCEPT -> acceptRequest(target, request);
       case DENY -> CompletableFuture.completedFuture(deny(target, request));
       case CLOSED -> CompletableFuture.completedFuture(false);
       case UNAVAILABLE -> {
@@ -267,11 +281,11 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
   }
 
   @Override
-  public boolean cancel(final VexPlayer requester) {
+  public boolean cancel(final VexPlayer requester, final String selector) {
     Optional<TeleportRequest> selected = latest(
         outgoing,
         outgoingByRequester.get(requester.getUniqueId()),
-        null
+        selector
     );
     if (selected.isEmpty()
         || !selected.get().transition(
@@ -296,6 +310,30 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
   }
 
   @Override
+  public CompletableFuture<Boolean> accept(final VexPlayer target, final String selector) {
+    Optional<TeleportRequest> request = findIncoming(target.getUniqueId(), selector);
+    if (request.isEmpty()) {
+      presentation.send(target, "teleport.request.none", Map.of(), "teleport-failed");
+      return CompletableFuture.completedFuture(false);
+    }
+    return acceptRequest(target, request.get());
+  }
+
+  @Override
+  public boolean toggle(final VexPlayer player, final Boolean enabled) {
+    TeleportContainer teleports = player.getContainer(TeleportContainer.class);
+    boolean next = enabled == null ? !teleports.acceptsRequests() : enabled;
+    teleports.setAcceptsRequests(next);
+    presentation.send(
+        player,
+        next ? "teleport.request.toggle-enabled" : "teleport.request.toggle-disabled",
+        Map.of(),
+        null
+    );
+    return next;
+  }
+
+  @Override
   public List<String> getIncomingSuggestions(final UUID targetId) {
     ConcurrentLinkedDeque<UUID> index = incomingByTarget.get(
         Objects.requireNonNull(targetId, "targetId")
@@ -317,7 +355,15 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
 
   @Override
   public void receive(final TeleportRequestOffer offer) {
-    players.find(offer.targetId()).ifPresent(target -> {
+    players.find(offer.targetId()).ifPresentOrElse(target -> {
+      TeleportRequestRejectionReason rejection = admissionRejection(target, offer);
+      if (rejection != TeleportRequestRejectionReason.NONE) {
+        deliverAdmission(
+            offer.requesterId(),
+            new TeleportRequestAdmission(offer.requestId(), false, rejection)
+        );
+        return;
+      }
       TeleportRequest request = new TeleportRequest(
           offer.requestId(), offer.requesterId(), offer.requesterName(), offer.targetId(),
           offer.targetName(), offer.type(), Instant.ofEpochMilli(offer.createdAt()),
@@ -325,9 +371,28 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
           TeleportRequestState.PENDING
       );
       if (request.expired(Instant.now())) {
+        deliverAdmission(
+            offer.requesterId(),
+            new TeleportRequestAdmission(
+                offer.requestId(),
+                false,
+                TeleportRequestRejectionReason.TARGET_UNAVAILABLE
+            )
+        );
         return;
       }
       store(incoming, incomingByTarget, request.targetId(), request);
+      if (!deliverAdmission(
+          offer.requesterId(),
+          new TeleportRequestAdmission(
+              offer.requestId(),
+              true,
+              TeleportRequestRejectionReason.NONE
+          )
+      )) {
+        request.transition(TeleportRequestState.PENDING, TeleportRequestState.FAILED);
+        return;
+      }
       presentation.sendInteractiveRequest(
           target,
           request.type(),
@@ -337,7 +402,79 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
           () -> review(target, request.requestId().toString())
       );
       scheduleExpiration(request, false);
-    });
+    }, () -> deliverAdmission(
+        offer.requesterId(),
+        new TeleportRequestAdmission(
+            offer.requestId(),
+            false,
+            TeleportRequestRejectionReason.TARGET_UNAVAILABLE
+        )
+    ));
+  }
+
+  @Override
+  public List<String> getOutgoingSuggestions(final UUID requesterId) {
+    ConcurrentLinkedDeque<UUID> index = outgoingByRequester.get(
+        Objects.requireNonNull(requesterId, "requesterId")
+    );
+    if (index == null) {
+      return List.of();
+    }
+    Instant now = Instant.now();
+    LinkedHashSet<String> names = new LinkedHashSet<>();
+    for (UUID requestId : index) {
+      outgoing.getIfPresent(requestId)
+          .filter(request -> request.state() == TeleportRequestState.PENDING)
+          .filter(request -> !request.expired(now))
+          .map(TeleportRequest::targetName)
+          .ifPresent(names::add);
+    }
+    return List.copyOf(names);
+  }
+
+  @Override
+  public void receive(final TeleportRequestAdmission admission) {
+    TeleportRequest request = outgoing.getIfPresent(admission.requestId()).orElse(null);
+    CompletableFuture<Boolean> waiting = pendingAdmissions.remove(admission.requestId());
+    if (request == null || waiting == null
+        || request.state() != TeleportRequestState.AWAITING_ADMISSION) {
+      return;
+    }
+    if (!admission.accepted()) {
+      request.transition(TeleportRequestState.AWAITING_ADMISSION, TeleportRequestState.FAILED);
+      players.find(request.requesterId()).ifPresent(player -> presentation.send(
+          player,
+          admissionMessage(admission.reason()),
+          Map.of("player", request.targetName()),
+          "teleport-failed"
+      ));
+      waiting.complete(false);
+      return;
+    }
+    if (!request.transition(
+        TeleportRequestState.AWAITING_ADMISSION,
+        TeleportRequestState.PENDING
+    )) {
+      waiting.complete(false);
+      return;
+    }
+    cooldowns.put(
+        request.requesterId(),
+        Instant.now().plus(configuration.requestCooldown())
+    );
+    players.find(request.requesterId()).ifPresent(player -> presentation.sendWithHover(
+        player,
+        "teleport.request.sent.message",
+        "teleport.request.sent.hover-text",
+        Map.of(
+            "player", request.targetName(),
+            "request_expiration_seconds",
+            Long.toString(configuration.requestExpiration().toSeconds())
+        ),
+        "request-sent"
+    ));
+    scheduleExpiration(request, true);
+    waiting.complete(true);
   }
 
   @Override
@@ -453,10 +590,21 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
     }
   }
 
-  private CompletableFuture<Boolean> accept(
+  private CompletableFuture<Boolean> acceptRequest(
       final VexPlayer target,
       final TeleportRequest request
   ) {
+    if (!target.getContainer(TeleportContainer.class).acceptsRequests()
+        || target.getContainer(SocialBlockContainer.class).hasBlocked(request.requesterId())) {
+      if (request.transition(TeleportRequestState.PENDING, TeleportRequestState.DENIED)) {
+        deliverDecision(
+            request.requesterId(),
+            new TeleportRequestDecision(request.requestId(), TeleportRequestState.DENIED, null)
+        );
+      }
+      presentation.send(target, "teleport.request.blocked", Map.of(), "teleport-failed");
+      return CompletableFuture.completedFuture(false);
+    }
     if (!request.transition(TeleportRequestState.PENDING, TeleportRequestState.ACCEPTING)) {
       presentation.send(target, "teleport.request.already-handled", Map.of(), "teleport-failed");
       return CompletableFuture.completedFuture(false);
@@ -579,6 +727,17 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
     return sendNetwork(targetId, TeleportMessages.REQUEST_OFFER, offer);
   }
 
+  private boolean deliverAdmission(
+      final UUID requesterId,
+      final TeleportRequestAdmission admission
+  ) {
+    if (players.find(requesterId).isPresent()) {
+      receive(admission);
+      return true;
+    }
+    return sendNetwork(requesterId, TeleportMessages.REQUEST_ADMISSION, admission);
+  }
+
   private boolean deliverDecision(final UUID playerId, final TeleportRequestDecision decision) {
     if (players.find(playerId).isPresent()) {
       receive(decision);
@@ -636,7 +795,8 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
         continue;
       }
       if (selector == null || selector.isBlank() || requestId.equals(exactId)
-          || request.requesterName().equalsIgnoreCase(selector)) {
+          || request.requesterName().equalsIgnoreCase(selector)
+          || request.targetName().equalsIgnoreCase(selector)) {
         return Optional.of(request);
       }
     }
@@ -697,6 +857,39 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
         : request.requesterName();
   }
 
+  private TeleportRequestRejectionReason admissionRejection(
+      final VexPlayer target,
+      final TeleportRequestOffer offer
+  ) {
+    if (!target.getContainer(TeleportContainer.class).acceptsRequests()) {
+      return TeleportRequestRejectionReason.REQUESTS_DISABLED;
+    }
+    if (target.getContainer(SocialBlockContainer.class).hasBlocked(offer.requesterId())) {
+      return TeleportRequestRejectionReason.BLOCKED;
+    }
+    ConcurrentLinkedDeque<UUID> index = incomingByTarget.get(target.getUniqueId());
+    if (index != null) {
+      for (UUID requestId : index) {
+        TeleportRequest request = incoming.getIfPresent(requestId).orElse(null);
+        if (request != null && request.state() == TeleportRequestState.PENDING
+            && request.requesterId().equals(offer.requesterId())
+            && request.type() == offer.type()) {
+          return TeleportRequestRejectionReason.DUPLICATE;
+        }
+      }
+    }
+    return TeleportRequestRejectionReason.NONE;
+  }
+
+  private String admissionMessage(final TeleportRequestRejectionReason reason) {
+    return switch (reason) {
+      case BLOCKED -> "teleport.request.blocked";
+      case REQUESTS_DISABLED -> "teleport.request.target-disabled";
+      case DUPLICATE -> "teleport.request.duplicate";
+      case TARGET_UNAVAILABLE, NONE -> "teleport.request.delivery-failed";
+    };
+  }
+
   private UUID parseUuid(final String value) {
     if (value == null || value.isBlank()) {
       return null;
@@ -730,6 +923,8 @@ public final class VexTeleportRequestService implements TeleportRequestService, 
 
   @Override
   public void close() {
+    pendingAdmissions.values().forEach(future -> future.complete(false));
+    pendingAdmissions.clear();
     incoming.invalidateAll();
     outgoing.invalidateAll();
     cooldowns.invalidateAll();

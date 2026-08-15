@@ -8,6 +8,7 @@ import dev.vexsoft.essentials.paper.teleport.messaging.direct.DirectTeleportExec
 import dev.vexsoft.essentials.paper.teleport.messaging.position.PlayerPositionRequest;
 import dev.vexsoft.essentials.paper.teleport.messaging.position.PlayerPositionResponse;
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestCompletion;
+import dev.vexsoft.essentials.api.teleport.request.TeleportRequestAdmission;
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestDecision;
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestExecution;
 import dev.vexsoft.essentials.paper.teleport.messaging.request.TeleportRequestOffer;
@@ -27,6 +28,10 @@ public class TeleportMessages {
   public static final MessageType<TeleportRequestOffer> REQUEST_OFFER = MessageType.json(
       MessageKey.of("vexessentials", "teleport.request-offer"),
       TeleportRequestOffer.class
+  );
+  public static final MessageType<TeleportRequestAdmission> REQUEST_ADMISSION = MessageType.json(
+      MessageKey.of("vexessentials", "teleport.request-admission"),
+      TeleportRequestAdmission.class
   );
   public static final MessageType<TeleportRequestDecision> REQUEST_DECISION = MessageType.json(
       MessageKey.of("vexessentials", "teleport.request-decision"),

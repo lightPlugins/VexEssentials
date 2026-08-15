@@ -1,0 +1,11 @@
+blocked: "<tailwind:zinc:4>You blocked <tailwind:sky>%player%<tailwind:zinc:4>. VexEssentials features will no longer allow interactions from this player."
+unblocked: "<tailwind:zinc:4>You unblocked <tailwind:sky>%player%<tailwind:zinc:4>."
+already-blocked: "<tailwind:amber>You have already blocked <tailwind:sky>%player%<tailwind:amber>."
+not-blocked: "<tailwind:amber>You have not blocked <tailwind:sky>%player%<tailwind:amber>."
+self: "<tailwind:red>You cannot block yourself."
+player-not-found: "<tailwind:red>The player <tailwind:red:7>%player%<tailwind:red> could not be found."
+failed: "<tailwind:red>Your block list is currently unavailable. Please try again shortly."
+list:
+  - "<tailwind:zinc:4>Blocked players (<tailwind:sky>%amount%<tailwind:zinc:4>):"
+  - "%blocked_players%"
+list-entry: "<tailwind:zinc:7>• <tailwind:sky>%player%"

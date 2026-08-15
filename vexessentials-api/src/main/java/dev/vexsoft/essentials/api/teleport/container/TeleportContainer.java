@@ -7,6 +7,12 @@ import java.util.Optional;
 /** Exposes the persistent teleport state belonging to one loaded Vex player. */
 public interface TeleportContainer extends PlayerContainer {
 
+  /** Returns whether this player currently accepts teleport requests. */
+  boolean acceptsRequests();
+
+  /** Changes whether this player accepts teleport requests. */
+  void setAcceptsRequests(boolean acceptsRequests);
+
   /** Returns the last position stored for the back command. */
   Optional<ServerPosition> getBackPosition();
 

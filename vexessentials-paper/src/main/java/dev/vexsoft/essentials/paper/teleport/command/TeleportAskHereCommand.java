@@ -16,37 +16,29 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import org.bukkit.entity.Player;
 
-/** Player-facing teleport request commands. */
-@CommandRoot(
-    name = "tpa",
-    description = "Requests a teleport from another player",
-    aliases = {"teleportask"},
-    playerOnly = true
-)
+/** Requests that another player teleport to the sender. */
+@CommandRoot(name = "tpahere", description = "Requests a player to teleport to you", playerOnly = true)
 @Dependencies({PlayerService.class, TeleportRequestService.class})
-public final class TeleportRequestCommand {
+public final class TeleportAskHereCommand {
 
   private final PlayerService players;
   private final TeleportRequestService requests;
 
-  /** Creates the request command. */
-  public TeleportRequestCommand(final VexServiceRegistry services) {
+  public TeleportAskHereCommand(final VexServiceRegistry services) {
     VexServiceRegistry checked = Objects.requireNonNull(services, "services");
     players = checked.require(PlayerService.class);
     requests = checked.require(TeleportRequestService.class);
   }
 
-  /** Requests permission to teleport to another player. */
-  @Command(value = "<player>", permission = "vexessentials.command.tpa")
+  @Command(value = "<player>", permission = "vexessentials.command.tpahere")
   public CompletableFuture<Boolean> request(
       final VexCommandSource source,
       @Argument("player") @Suggest(PlayerNameSuggestionProvider.class) final String targetName
   ) {
-    return requests.send(player(source), targetName, TeleportRequestType.TO_TARGET);
+    return requests.send(player(source), targetName, TeleportRequestType.TARGET_HERE);
   }
 
   private VexPlayer player(final VexCommandSource source) {
-    Player player = (Player) source.getSender();
-    return players.require(player.getUniqueId());
+    return players.require(((Player) source.getSender()).getUniqueId());
   }
 }

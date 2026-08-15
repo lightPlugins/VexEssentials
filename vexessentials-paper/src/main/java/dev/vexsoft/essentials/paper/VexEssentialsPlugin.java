@@ -8,6 +8,15 @@ import dev.vexsoft.core.paper.plugin.VexPlugin;
 import dev.vexsoft.core.paper.service.commands.CommandService;
 import dev.vexsoft.core.paper.service.listeners.ListenerService;
 import dev.vexsoft.essentials.api.service.teleport.EssentialsTeleportService;
+import dev.vexsoft.essentials.api.service.socialblock.SocialBlockService;
+import dev.vexsoft.essentials.api.socialblock.SocialBlockContainer;
+import dev.vexsoft.essentials.paper.service.socialblock.VexSocialBlockService;
+import dev.vexsoft.essentials.paper.service.socialblock.container.VexSocialBlockContainer;
+import dev.vexsoft.essentials.paper.service.socialblock.presentation.SocialBlockPresentationService;
+import dev.vexsoft.essentials.paper.service.socialblock.presentation.VexSocialBlockPresentationService;
+import dev.vexsoft.essentials.paper.socialblock.command.BlockCommand;
+import dev.vexsoft.essentials.paper.socialblock.command.BlockListCommand;
+import dev.vexsoft.essentials.paper.socialblock.command.UnblockCommand;
 import dev.vexsoft.essentials.api.service.warp.WarpLocalizationService;
 import dev.vexsoft.essentials.api.service.warp.WarpService;
 import dev.vexsoft.essentials.api.teleport.container.TeleportContainer;
@@ -45,6 +54,11 @@ import dev.vexsoft.essentials.paper.service.warp.presentation.WarpPresentationSe
 import dev.vexsoft.essentials.paper.teleport.command.BackCommand;
 import dev.vexsoft.essentials.paper.teleport.command.TeleportCommand;
 import dev.vexsoft.essentials.paper.teleport.command.TeleportRequestCommand;
+import dev.vexsoft.essentials.paper.teleport.command.TeleportAcceptCommand;
+import dev.vexsoft.essentials.paper.teleport.command.TeleportAskHereCommand;
+import dev.vexsoft.essentials.paper.teleport.command.TeleportCancelCommand;
+import dev.vexsoft.essentials.paper.teleport.command.TeleportDenyCommand;
+import dev.vexsoft.essentials.paper.teleport.command.TeleportToggleCommand;
 import dev.vexsoft.essentials.paper.teleport.command.TeleportHereCommand;
 import dev.vexsoft.essentials.paper.teleport.data.VexEssentialsPlayerData;
 import dev.vexsoft.essentials.paper.teleport.messaging.handler.position.PlayerPositionRequestHandler;
@@ -52,6 +66,7 @@ import dev.vexsoft.essentials.paper.teleport.messaging.handler.position.PlayerPo
 import dev.vexsoft.essentials.paper.teleport.messaging.handler.direct.DirectTeleportCompletionHandler;
 import dev.vexsoft.essentials.paper.teleport.messaging.handler.direct.DirectTeleportExecutionHandler;
 import dev.vexsoft.essentials.paper.teleport.messaging.handler.request.TeleportRequestCompletionHandler;
+import dev.vexsoft.essentials.paper.teleport.messaging.handler.request.TeleportRequestAdmissionHandler;
 import dev.vexsoft.essentials.paper.teleport.messaging.handler.request.TeleportRequestDecisionHandler;
 import dev.vexsoft.essentials.paper.teleport.messaging.handler.request.TeleportRequestExecutionHandler;
 import dev.vexsoft.essentials.paper.teleport.messaging.handler.request.TeleportRequestOfferHandler;
@@ -71,6 +86,11 @@ public final class VexEssentialsPlugin extends VexPlugin {
 
   @Override
   protected void registerServices() {
+    getServices().register(SocialBlockService.class, VexSocialBlockService.class);
+    getServices().register(
+        SocialBlockPresentationService.class,
+        VexSocialBlockPresentationService.class
+    );
     getServices().register(
         TeleportConfigurationService.class,
         VexTeleportConfigurationService.class
@@ -111,6 +131,7 @@ public final class VexEssentialsPlugin extends VexPlugin {
 
   @Override
   protected void registerContainers(final PlayerContainerService containers) {
+    containers.register(SocialBlockContainer.class, VexSocialBlockContainer::new);
     containers.register(
         TeleportContainer.class,
         player -> new VexTeleportContainer(player, getLogger())
@@ -128,6 +149,7 @@ public final class VexEssentialsPlugin extends VexPlugin {
     messages.register(PlayerPositionRequestHandler.class);
     messages.register(PlayerPositionResponseHandler.class);
     messages.register(TeleportRequestOfferHandler.class);
+    messages.register(TeleportRequestAdmissionHandler.class);
     messages.register(TeleportRequestDecisionHandler.class);
     messages.register(TeleportRequestExecutionHandler.class);
     messages.register(TeleportRequestCompletionHandler.class);
@@ -142,6 +164,14 @@ public final class VexEssentialsPlugin extends VexPlugin {
     commands.register(TeleportCommand.class);
     commands.register(TeleportHereCommand.class);
     commands.register(TeleportRequestCommand.class);
+    commands.register(TeleportAskHereCommand.class);
+    commands.register(TeleportAcceptCommand.class);
+    commands.register(TeleportDenyCommand.class);
+    commands.register(TeleportCancelCommand.class);
+    commands.register(TeleportToggleCommand.class);
+    commands.register(BlockCommand.class);
+    commands.register(UnblockCommand.class);
+    commands.register(BlockListCommand.class);
     commands.register(BackCommand.class);
     commands.register(WarpTeleportCommand.class);
     commands.register(WarpListCommand.class);

@@ -25,6 +25,19 @@ public final class VexTeleportContainer implements TeleportContainer {
   }
 
   @Override
+  public boolean acceptsRequests() {
+    return player.read(VexEssentialsPlayerData.TELEPORT, TeleportData::isAcceptsRequests);
+  }
+
+  @Override
+  public void setAcceptsRequests(final boolean acceptsRequests) {
+    player.update(
+        VexEssentialsPlayerData.TELEPORT,
+        (Consumer<TeleportData>) data -> data.setAcceptsRequests(acceptsRequests)
+    );
+  }
+
+  @Override
   public Optional<ServerPosition> getBackPosition() {
     return player.read(VexEssentialsPlayerData.TELEPORT, data -> readPosition(data));
   }

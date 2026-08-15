@@ -20,7 +20,7 @@ error:
   unavailable: "<tailwind:red>The teleport service is currently unavailable. Please try again shortly."
   position: "<tailwind:red>Your current position could not be determined, so the request was not accepted."
   dialog: "<tailwind:red>The confirmation dialog could not be opened. Your request remains unchanged."
-  presentation: "<tailwind:red>The teleport request could not be displayed correctly. Please use <tailwind:red:7>/tpa accept<tailwind:red> instead."
+  presentation: "<tailwind:red>The teleport request could not be displayed correctly. Please use <tailwind:red:7>/tpaccept<tailwind:red> instead."
 request:
   self: "<tailwind:red>You cannot send a teleport request to yourself."
   cooldown: "<tailwind:red>Please wait <tailwind:amber>%remaining_time%<tailwind:red> before sending another teleport request."
@@ -29,11 +29,16 @@ request:
   expired: "<tailwind:red>This teleport request has already expired."
   already-handled: "<tailwind:red>This teleport request has already been handled."
   delivery-failed: "<tailwind:red>Your teleport request could not be delivered to <tailwind:red:7>%player%<tailwind:red>."
+  blocked: "<tailwind:red>You cannot exchange teleport requests with this player."
+  target-disabled: "<tailwind:red>This player is not accepting teleport requests."
+  duplicate: "<tailwind:red>You already have a matching pending teleport request for this player."
+  toggle-enabled: "<tailwind:zinc:4>You are now <tailwind:lime>accepting<tailwind:zinc:4> teleport requests."
+  toggle-disabled: "<tailwind:zinc:4>You are no longer accepting teleport requests."
   sent:
     message: "<tailwind:zinc:4>Your teleport request to <tailwind:sky>%player%<tailwind:zinc:4> was sent <tailwind:lime>successfully<tailwind:zinc:4>."
     hover-text:
       - "<tailwind:zinc:4>The request expires after <tailwind:amber>%request_expiration_time%<tailwind:zinc:4>."
-      - "<tailwind:zinc:7>You can cancel it with <tailwind:sky>/tpa cancel<tailwind:zinc:7>."
+      - "<tailwind:zinc:7>You can cancel it with <tailwind:sky>/tpcancel<tailwind:zinc:7>."
   received:
     to-you:
       message: "<tailwind:sky>%player%<tailwind:zinc:4> would like to teleport to you. <tailwind:sky>Click here<tailwind:zinc:4> to review the request."

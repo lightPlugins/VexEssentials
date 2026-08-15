@@ -11,6 +11,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.84-stable")
     testImplementation("dev.vexsoft:vexcore-paper-api:1.0.0-SNAPSHOT")
     testImplementation("io.papermc.paper:paper-api:26.2.build.84-stable")
+    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.21.2")
     testImplementation(platform("org.junit:junit-bom:6.0.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
