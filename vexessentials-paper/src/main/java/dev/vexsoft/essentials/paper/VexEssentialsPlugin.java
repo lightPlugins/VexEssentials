@@ -10,6 +10,7 @@ import dev.vexsoft.core.paper.service.listeners.ListenerService;
 import dev.vexsoft.essentials.api.service.teleport.EssentialsTeleportService;
 import dev.vexsoft.essentials.api.service.warp.WarpLocalizationService;
 import dev.vexsoft.essentials.api.service.warp.WarpService;
+import dev.vexsoft.essentials.api.service.world.ManagedWorldService;
 import dev.vexsoft.essentials.api.teleport.container.TeleportContainer;
 import dev.vexsoft.essentials.paper.command.VexEssentialsReloadCommand;
 import dev.vexsoft.essentials.paper.service.reload.EssentialsReloadService;
@@ -42,6 +43,10 @@ import dev.vexsoft.essentials.paper.service.warp.localization.WarpLocalizationCo
 import dev.vexsoft.essentials.paper.service.warp.localization.VexWarpLocalizationConfigurationService;
 import dev.vexsoft.essentials.paper.service.warp.presentation.VexWarpPresentationService;
 import dev.vexsoft.essentials.paper.service.warp.presentation.WarpPresentationService;
+import dev.vexsoft.essentials.paper.service.world.VexManagedWorldService;
+import dev.vexsoft.essentials.paper.service.world.command.VexWorldCommandService;
+import dev.vexsoft.essentials.paper.service.world.command.WorldCommandService;
+import dev.vexsoft.essentials.paper.service.world.listener.WorldSpawnJoinListener;
 import dev.vexsoft.essentials.paper.teleport.command.BackCommand;
 import dev.vexsoft.essentials.paper.teleport.command.TeleportCommand;
 import dev.vexsoft.essentials.paper.teleport.command.TeleportRequestCommand;
@@ -69,6 +74,16 @@ import dev.vexsoft.essentials.paper.warp.command.WarpTeleportCommand;
 import dev.vexsoft.essentials.paper.warp.command.WarpUpdateCommand;
 import dev.vexsoft.essentials.paper.warp.data.VexEssentialsGlobalData;
 import dev.vexsoft.essentials.paper.warp.messaging.handler.WarpRegistryChangedHandler;
+import dev.vexsoft.essentials.paper.world.command.WorldCreateCommand;
+import dev.vexsoft.essentials.paper.world.command.WorldDeleteCommand;
+import dev.vexsoft.essentials.paper.world.command.WorldImportCommand;
+import dev.vexsoft.essentials.paper.world.command.WorldInfoCommand;
+import dev.vexsoft.essentials.paper.world.command.WorldListCommand;
+import dev.vexsoft.essentials.paper.world.command.WorldLoadCommand;
+import dev.vexsoft.essentials.paper.world.command.WorldSetServerSpawnCommand;
+import dev.vexsoft.essentials.paper.world.command.WorldSetSpawnCommand;
+import dev.vexsoft.essentials.paper.world.command.WorldTeleportCommand;
+import dev.vexsoft.essentials.paper.world.command.WorldUnloadCommand;
 
 /**
  * Starts VexEssentials and connects it to the shared VexCore infrastructure
@@ -107,6 +122,8 @@ public final class VexEssentialsPlugin extends VexPlugin {
     );
     getServices().register(WarpCommandContext.class, VexWarpCommandContext.class);
     getServices().register(WarpCommandService.class, VexWarpCommandService.class);
+    getServices().register(ManagedWorldService.class, VexManagedWorldService.class);
+    getServices().register(WorldCommandService.class, VexWorldCommandService.class);
     getServices().register(EssentialsReloadService.class, VexEssentialsReloadService.class);
   }
 
@@ -160,18 +177,31 @@ public final class VexEssentialsPlugin extends VexPlugin {
     commands.register(WarpCreateCommand.class);
     commands.register(WarpUpdateCommand.class);
     commands.register(WarpDeleteCommand.class);
+    commands.register(WorldListCommand.class);
+    commands.register(WorldInfoCommand.class);
+    commands.register(WorldCreateCommand.class);
+    commands.register(WorldDeleteCommand.class);
+    commands.register(WorldImportCommand.class);
+    commands.register(WorldLoadCommand.class);
+    commands.register(WorldUnloadCommand.class);
+    commands.register(WorldTeleportCommand.class);
+    commands.register(WorldSetServerSpawnCommand.class);
+    commands.register(WorldSetSpawnCommand.class);
   }
 
   @Override
   protected void registerListeners(final ListenerService listeners) {
     listeners.register(TeleportWarmupListener.class, getServices());
+    listeners.register(WorldSpawnJoinListener.class, getServices());
   }
 
   @Override
   protected void onVexEnable() {
     getServices().require(WarpService.class).synchronizePermissions();
+    getServices().require(ManagedWorldService.class).initialize();
     getLogger().info("Teleport services started successfully");
     getLogger().info("Warp services started successfully");
+    getLogger().info("World services started successfully");
     getLogger().info("VexEssentials successfully enabled");
   }
 

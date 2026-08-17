@@ -1,0 +1,96 @@
+create:
+  success: "<tailwind:zinc:4>World <tailwind:sky>%world% <tailwind:zinc:4>was created <tailwind:lime>successfully"
+  invalid-seed: "<tailwind:red>The seed <tailwind:red:7>%seed% <tailwind:red>is not a valid whole number"
+delete:
+  success: "<tailwind:zinc:4>World <tailwind:sky>%world% <tailwind:zinc:4>and its dimension files were deleted <tailwind:lime>successfully"
+  confirm-required:
+    - "<tailwind:amber>This permanently deletes <tailwind:amber:7>%world%<tailwind:amber>."
+    - "<tailwind:amber>Run <tailwind:amber:7>/world delete %world% confirm <tailwind:amber>to continue."
+import:
+  success: "<tailwind:zinc:4>World <tailwind:sky>%world% <tailwind:zinc:4>is now managed by VexEssentials"
+load:
+  success: "<tailwind:zinc:4>World <tailwind:sky>%world% <tailwind:zinc:4>was loaded <tailwind:lime>successfully"
+unload:
+  success: "<tailwind:zinc:4>World <tailwind:sky>%world% <tailwind:zinc:4>was unloaded <tailwind:lime>successfully"
+teleport:
+  success: "<tailwind:zinc:4>You were teleported to <tailwind:sky>%world%"
+  failed: "<tailwind:red>You could not be teleported to <tailwind:red:7>%world%"
+  not-loaded: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>is not loaded"
+set-server-spawn:
+  success: "<tailwind:zinc:4>The server spawn is now located in <tailwind:sky>%world%"
+  failed: "<tailwind:red>Your current position could not be used as the server spawn"
+set-spawn:
+  success: "<tailwind:zinc:4>The spawn of world <tailwind:sky>%world% <tailwind:zinc:4>was updated <tailwind:lime>successfully"
+  failed: "<tailwind:red>Your current position could not be used as the world spawn"
+list:
+  header:
+    - ""
+    - "<tailwind:sky>Managed Worlds"
+    - ""
+  entry:
+    loaded: "<tailwind:zinc:7>• <tailwind:sky>%world% <tailwind:zinc:7>— <tailwind:lime>%state% <tailwind:zinc:7>• %generator%"
+    unloaded: "<tailwind:zinc:7>• <tailwind:sky>%world% <tailwind:zinc:7>— <tailwind:amber>%state% <tailwind:zinc:7>• %generator%"
+    loading: "<tailwind:zinc:7>• <tailwind:sky>%world% <tailwind:zinc:7>— <tailwind:sky>%state% <tailwind:zinc:7>• %generator%"
+    unloading: "<tailwind:zinc:7>• <tailwind:sky>%world% <tailwind:zinc:7>— <tailwind:amber>%state% <tailwind:zinc:7>• %generator%"
+    failed: "<tailwind:zinc:7>• <tailwind:sky>%world% <tailwind:zinc:7>— <tailwind:red>%state% <tailwind:zinc:7>• %generator%"
+  footer:
+    - ""
+    - "<tailwind:zinc:7>%count% managed world(s)"
+    - ""
+info:
+  message:
+    loaded:
+      - ""
+      - "<tailwind:sky>%world%"
+      - "<tailwind:zinc:7>State <tailwind:lime>%state%"
+      - "<tailwind:zinc:7>Generator <tailwind:zinc:4>%generator%"
+      - "<tailwind:zinc:7>Auto load <tailwind:zinc:4>%auto-load%"
+      - ""
+    unloaded:
+      - ""
+      - "<tailwind:sky>%world%"
+      - "<tailwind:zinc:7>State <tailwind:amber>%state%"
+      - "<tailwind:zinc:7>Generator <tailwind:zinc:4>%generator%"
+      - "<tailwind:zinc:7>Auto load <tailwind:zinc:4>%auto-load%"
+      - ""
+    loading:
+      - ""
+      - "<tailwind:sky>%world%"
+      - "<tailwind:zinc:7>State <tailwind:sky>%state%"
+      - "<tailwind:zinc:7>Generator <tailwind:zinc:4>%generator%"
+      - "<tailwind:zinc:7>Auto load <tailwind:zinc:4>%auto-load%"
+      - ""
+    unloading:
+      - ""
+      - "<tailwind:sky>%world%"
+      - "<tailwind:zinc:7>State <tailwind:amber>%state%"
+      - "<tailwind:zinc:7>Generator <tailwind:zinc:4>%generator%"
+      - "<tailwind:zinc:7>Auto load <tailwind:zinc:4>%auto-load%"
+      - ""
+    failed:
+      - ""
+      - "<tailwind:sky>%world%"
+      - "<tailwind:zinc:7>State <tailwind:red>%state%"
+      - "<tailwind:zinc:7>Generator <tailwind:zinc:4>%generator%"
+      - "<tailwind:zinc:7>Auto load <tailwind:zinc:4>%auto-load%"
+      - ""
+  not-managed: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>is not managed"
+error:
+  invalid-world: "<tailwind:red>The world key <tailwind:red:7>%world% <tailwind:red>is invalid"
+  already-exists: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>already exists"
+  folder-exists: "<tailwind:red>A dimension folder already exists for <tailwind:red:7>%world%"
+  folder-missing: "<tailwind:red>No dimension folder exists for <tailwind:red:7>%world%"
+  already-managed: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>is already managed"
+  not-managed: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>is not managed"
+  already-loaded: "<tailwind:amber>World <tailwind:amber:7>%world% <tailwind:amber>is already loaded"
+  not-loaded: "<tailwind:amber>World <tailwind:amber:7>%world% <tailwind:amber>is not loaded"
+  protected: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>is a protected server dimension"
+  players-present: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>still contains players"
+  server-spawn: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>contains the configured server spawn"
+  operation-running: "<tailwind:amber>Another operation is already running for <tailwind:amber:7>%world%"
+  creation-rejected: "<tailwind:red>Paper rejected creation of <tailwind:red:7>%world%"
+  unload-rejected: "<tailwind:red>Paper rejected unloading <tailwind:red:7>%world%"
+  internal-error: "<tailwind:red>The operation for <tailwind:red:7>%world% <tailwind:red>failed; check the console"
+  delete-failed: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>could not be deleted safely; check the console"
+  wrong-server: "<tailwind:red>The selected position does not belong to this server"
+  spawn-rejected: "<tailwind:red>Paper rejected the new spawn for <tailwind:red:7>%world%"

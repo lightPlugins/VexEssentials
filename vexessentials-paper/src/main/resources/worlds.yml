@@ -1,0 +1,12 @@
+# Worlds managed by VexEssentials. Custom worlds are stored below
+# <level-directory>/dimensions/<namespace>/<world> by Paper 26.2.
+worlds: []
+
+# Set through /world setserverspawn.
+server-spawn: {}
+
+# Teleport every player to the server spawn whenever they join this server.
+teleport-on-join: true
+
+# Updated automatically by /world unload overworld and /world load overworld.
+unload-overworld-on-startup: false

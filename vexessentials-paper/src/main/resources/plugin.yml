@@ -7,3 +7,24 @@ description: Essential server features built on VexCore
 folia-supported: true
 depend:
   - VexCore
+permissions:
+  vexessentials.command.world.list:
+    default: op
+  vexessentials.command.world.info:
+    default: op
+  vexessentials.command.world.create:
+    default: op
+  vexessentials.command.world.delete:
+    default: op
+  vexessentials.command.world.import:
+    default: op
+  vexessentials.command.world.load:
+    default: op
+  vexessentials.command.world.unload:
+    default: op
+  vexessentials.command.world.teleport:
+    default: op
+  vexessentials.command.world.setserverspawn:
+    default: op
+  vexessentials.command.world.setspawn:
+    default: op
