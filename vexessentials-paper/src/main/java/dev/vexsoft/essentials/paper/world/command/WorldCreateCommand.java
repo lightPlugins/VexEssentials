@@ -23,7 +23,7 @@ public final class WorldCreateCommand {
     commands = Objects.requireNonNull(services, "services").require(WorldCommandService.class);
   }
 
-  /** Creates a normal, flat, or void dimension and teleports the creator to its spawn. */
+  /** Creates a dimension with the selected profile and teleports the creator to its spawn. */
   @Command(
       value = "create <world> <generator> [seed]",
       permission = "vexessentials.command.world.create",

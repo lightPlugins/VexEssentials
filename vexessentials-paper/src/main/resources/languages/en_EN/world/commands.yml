@@ -76,6 +76,8 @@ info:
       - ""
   not-managed: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>is not managed"
 error:
+  nether-generator: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>requires the nether or nether_void generator"
+  end-generator: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>requires the end or end_void generator"
   invalid-world: "<tailwind:red>The world key <tailwind:red:7>%world% <tailwind:red>is invalid"
   already-exists: "<tailwind:red>World <tailwind:red:7>%world% <tailwind:red>already exists"
   folder-exists: "<tailwind:red>A dimension folder already exists for <tailwind:red:7>%world%"

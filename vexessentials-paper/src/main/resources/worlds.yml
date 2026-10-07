@@ -1,5 +1,12 @@
 # Worlds managed by VexEssentials. Custom worlds are stored below
 # <level-directory>/dimensions/<namespace>/<world> by Paper 26.2.
+# Generator profiles: normal, flat, void, nether, nether_void, end, end_void.
+# Void profiles contain only a bedrock block below the spawn at (0, 64, 0).
+# /world create nether nether_void creates minecraft:the_nether as an empty nether.
+# /world create end end_void creates minecraft:the_end as an empty end.
+# Disable Paper's automatic loading of these dimensions so VexEssentials applies their generators on startup.
+# Creation requires an unloaded dimension with no existing dimension folder; existing data is never replaced.
+# end_void disables Paper's dragon-fight scan in that dimension's paper-world.yml to prevent portal generation.
 worlds: []
 
 # Set through /world setserverspawn.

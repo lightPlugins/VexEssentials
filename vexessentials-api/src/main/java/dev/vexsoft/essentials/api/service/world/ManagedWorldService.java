@@ -22,6 +22,10 @@ public interface ManagedWorldService extends VexService {
 
   Optional<ManagedWorld> find(WorldKey key);
 
+  /**
+   * Creates and registers an unused dimension, including vanilla nether and end IDs with matching profiles.
+   * Existing dimension folders and loaded worlds are never replaced.
+   */
   CompletableFuture<WorldOperationResult> create(
       WorldKey key,
       WorldGeneratorType generator,

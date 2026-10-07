@@ -56,6 +56,8 @@ public final class VexManagedWorldService implements ManagedWorldService {
       new WorldKey("minecraft", "the_end")
   );
   private static final WorldKey OVERWORLD = new WorldKey("minecraft", "overworld");
+  private static final WorldKey NETHER = new WorldKey("minecraft", "the_nether");
+  private static final WorldKey END = new WorldKey("minecraft", "the_end");
 
   private final ConfigurationService configurations;
   private final ScheduleService schedules;
@@ -70,16 +72,33 @@ public final class VexManagedWorldService implements ManagedWorldService {
   private volatile boolean teleportToServerSpawnOnJoin;
   private volatile boolean unloadOverworldOnStartup;
 
-  public VexManagedWorldService(final VexServiceRegistry services) {
-    VexServiceRegistry checked = Objects.requireNonNull(services, "services");
-    configurations = checked.require(ConfigurationService.class);
-    schedules = checked.require(ScheduleService.class);
-    worlds = checked.require(WorldService.class);
-    serverIdentity = checked.require(ServerIdentityService.class);
-    levelDirectory = Bukkit.getServer().getLevelDirectory().toAbsolutePath().normalize();
-    logger = Logger.getLogger(checked.getOwner().getServiceOwnerName());
-    reload();
-  }
+    public VexManagedWorldService(final VexServiceRegistry services) {
+        this(
+            Objects.requireNonNull(services, "services").require(ConfigurationService.class),
+            services.require(ScheduleService.class),
+            services.require(WorldService.class),
+            services.require(ServerIdentityService.class),
+            Bukkit.getServer().getLevelDirectory(),
+            Logger.getLogger(services.getOwner().getServiceOwnerName())
+        );
+    }
+
+    VexManagedWorldService(
+        final ConfigurationService configurations,
+        final ScheduleService schedules,
+        final WorldService worlds,
+        final ServerIdentityService serverIdentity,
+        final Path levelDirectory,
+        final Logger logger
+    ) {
+        this.configurations = Objects.requireNonNull(configurations, "configurations");
+        this.schedules = Objects.requireNonNull(schedules, "schedules");
+        this.worlds = Objects.requireNonNull(worlds, "worlds");
+        this.serverIdentity = Objects.requireNonNull(serverIdentity, "serverIdentity");
+        this.levelDirectory = Objects.requireNonNull(levelDirectory, "levelDirectory").toAbsolutePath().normalize();
+        this.logger = Objects.requireNonNull(logger, "logger");
+        reload();
+    }
 
   @Override
   public void initialize() {
@@ -140,11 +159,17 @@ public final class VexManagedWorldService implements ManagedWorldService {
       final OptionalLong seed
   ) {
     WorldKey checkedKey = Objects.requireNonNull(key, "key");
-    if (PROTECTED_WORLDS.contains(checkedKey)) {
+    if (PROTECTED_WORLDS.contains(checkedKey) && !isManagedVanillaDimension(checkedKey)) {
       return completedFailure("protected");
     }
     dimensionPath(checkedKey);
     WorldGeneratorType checkedGenerator = Objects.requireNonNull(generator, "generator");
+    if (checkedKey.equals(NETHER) && !isNetherGenerator(checkedGenerator)) {
+      return completedFailure("nether-generator");
+    }
+    if (checkedKey.equals(END) && !isEndGenerator(checkedGenerator)) {
+      return completedFailure("end-generator");
+    }
     if (definitions.containsKey(checkedKey) || worlds.find(checkedKey).isPresent()) {
       return completedFailure("already-exists");
     }
@@ -215,7 +240,8 @@ public final class VexManagedWorldService implements ManagedWorldService {
   @Override
   public CompletableFuture<WorldOperationResult> unload(final WorldKey key) {
     WorldKey checkedKey = Objects.requireNonNull(key, "key");
-    if (PROTECTED_WORLDS.contains(checkedKey) && !checkedKey.equals(OVERWORLD)) {
+    if (PROTECTED_WORLDS.contains(checkedKey) && !checkedKey.equals(OVERWORLD)
+        && !(isManagedVanillaDimension(checkedKey) && definitions.containsKey(checkedKey))) {
       return completedFailure("protected");
     }
     if (!definitions.containsKey(checkedKey) && !checkedKey.equals(OVERWORLD)) {
@@ -323,6 +349,44 @@ public final class VexManagedWorldService implements ManagedWorldService {
     applyServerSpawn();
   }
 
+    static WorldCreator createWorldCreator(
+        final WorldKey key,
+        final WorldGeneratorType generator,
+        final OptionalLong seed
+    ) {
+        WorldCreator creator = WorldCreator.ofKey(new NamespacedKey(key.namespace(), key.value()));
+        seed.ifPresent(creator::seed);
+        switch (generator) {
+            case NORMAL -> creator.type(WorldType.NORMAL);
+            case FLAT -> creator.type(WorldType.FLAT);
+            case NETHER -> creator.environment(World.Environment.NETHER);
+            case END -> creator.environment(World.Environment.THE_END);
+            case VOID, NETHER_VOID, END_VOID -> {
+                creator.environment(switch (generator) {
+                    case NETHER_VOID -> World.Environment.NETHER;
+                    case END_VOID -> World.Environment.THE_END;
+                    default -> World.Environment.NORMAL;
+                });
+                creator.generator(new VoidChunkGenerator())
+                    .generateStructures(false)
+                    .forcedSpawnPosition(Position.block(0, 64, 0), 0, 0);
+            }
+        }
+        return creator;
+    }
+
+    private static boolean isNetherGenerator(final WorldGeneratorType generator) {
+        return generator == WorldGeneratorType.NETHER || generator == WorldGeneratorType.NETHER_VOID;
+    }
+
+    private static boolean isEndGenerator(final WorldGeneratorType generator) {
+        return generator == WorldGeneratorType.END || generator == WorldGeneratorType.END_VOID;
+    }
+
+    private static boolean isManagedVanillaDimension(final WorldKey key) {
+        return key.equals(NETHER) || key.equals(END);
+    }
+
   private CompletableFuture<WorldOperationResult> operate(
       final WorldKey key,
       final Operation operation
@@ -344,32 +408,27 @@ public final class VexManagedWorldService implements ManagedWorldService {
     return result;
   }
 
-  private WorldOperationResult createNow(final Definition definition, final boolean register) {
-    WorldCreator creator = WorldCreator.ofKey(toNamespacedKey(definition.key()));
-    definition.seed().ifPresent(creator::seed);
-    switch (definition.generator()) {
-      case NORMAL -> creator.type(WorldType.NORMAL);
-      case FLAT -> creator.type(WorldType.FLAT);
-      case VOID -> creator
-          .generator(new VoidChunkGenerator())
-          .generateStructures(false)
-          .forcedSpawnPosition(Position.block(0, 64, 0), 0, 0);
+    private WorldOperationResult createNow(final Definition definition, final boolean register) {
+        if (definition.generator() == WorldGeneratorType.END_VOID) {
+            // The dragon fight generates blocks independently of the chunk generator.
+            VoidEndWorldConfiguration.prepare(dimensionPath(definition.key()));
+        }
+        WorldCreator creator = createWorldCreator(definition.key(), definition.generator(), definition.seed());
+        World world = Bukkit.createWorld(creator);
+        if (world == null) {
+            return WorldOperationResult.failed("creation-rejected");
+        }
+        if (register) {
+            definitions.put(definition.key(), definition);
+            save();
+        }
+        if (creator.generator() instanceof VoidChunkGenerator) {
+            Location spawn = new Location(world, 0.5, 64, 0.5);
+            world.setSpawnLocation(spawn);
+        }
+        applyServerSpawn();
+        return WorldOperationResult.success();
     }
-    World world = Bukkit.createWorld(creator);
-    if (world == null) {
-      return WorldOperationResult.failed("creation-rejected");
-    }
-    if (register) {
-      definitions.put(definition.key(), definition);
-      save();
-    }
-    if (definition.generator() == WorldGeneratorType.VOID) {
-      Location spawn = new Location(world, 0.5, 64, 0.5);
-      world.setSpawnLocation(spawn);
-    }
-    applyServerSpawn();
-    return WorldOperationResult.success();
-  }
 
   private ManagedWorld view(final Definition definition) {
     ManagedWorldState state;
@@ -420,10 +479,6 @@ public final class VexManagedWorldService implements ManagedWorldService {
     result.complete(WorldOperationResult.failed("delete-failed"));
   }
 
-  private NamespacedKey toNamespacedKey(final WorldKey key) {
-    return new NamespacedKey(key.namespace(), key.value());
-  }
-
   private synchronized void save() {
     VexConfiguration current = Objects.requireNonNull(configuration, "configuration");
     List<Map<String, Object>> values = definitions.values().stream()
@@ -467,6 +522,12 @@ public final class VexManagedWorldService implements ManagedWorldService {
       WorldGeneratorType generator = WorldGeneratorType.valueOf(
           String.valueOf(rawGenerator).toUpperCase(Locale.ROOT)
       );
+      if (key.equals(NETHER) && !isNetherGenerator(generator)) {
+        throw new IllegalArgumentException("minecraft:the_nether requires the nether or nether_void generator");
+      }
+      if (key.equals(END) && !isEndGenerator(generator)) {
+        throw new IllegalArgumentException("minecraft:the_end requires the end or end_void generator");
+      }
       Object rawAutoLoad = map.containsKey("auto-load") ? map.get("auto-load") : true;
       boolean autoLoad = Boolean.parseBoolean(String.valueOf(rawAutoLoad));
       Object rawSeed = map.get("seed");
